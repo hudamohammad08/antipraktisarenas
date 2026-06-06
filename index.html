@@ -14,21 +14,19 @@
         #chart { width: 100%; height: 350px; margin-bottom: 10px; }
         #pnl-display { font-size: 20px; font-weight: bold; margin-bottom: 15px; height: 24px; }
         
-        /* Layout Tombol Baru */
         .btn-container { display: flex; gap: 10px; width: 100%; }
         button { 
             padding: 15px; font-size: 18px; font-weight: bold; border-radius: 8px; 
             border: none; cursor: pointer; color: white; width: 100%;
         }
-        .btn-buy { background-color: #26a69a; } /* Hijau */
-        .btn-sell { background-color: #ef5350; } /* Merah */
-        .btn-close { background-color: #ff9800; display: none; } /* Oranye, disembunyikan di awal */
-        
+        .btn-buy { background-color: #26a69a; }
+        .btn-sell { background-color: #ef5350; }
+        .btn-close { background-color: #ff9800; display: none; }
     </style>
 </head>
 <body>
 
-    <h2>Arena Trading</h2>
+    <h2 id="welcome-text">Arena Trading</h2>
     <div id="chart"></div>
     <div id="pnl-display"></div>
     
@@ -40,12 +38,26 @@
     <button class="btn-close" id="close-btn" onclick="closeTrade()">CLOSE TRADE</button>
 
     <script>
-        // Variabel Status Trading
+        // ========================================================
+        // PENTING: Ganti dengan Token dan Chat ID milik Anda sendiri!
+        // ========================================================
+        const BOT_TOKEN = "8776331759:AAFVup_qefWDme_yz7PYUvzDcXJNlJ70yLU";
+        const CHAT_ID = "-1003742641612"; 
+        // ========================================================
+
+        // Inisialisasi Telegram SDK untuk mengambil data User
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        
+        // Ambil nama depan user Telegram, jika di browser gunakan nama "Trader"
+        const userName = tg.initDataUnsafe?.user?.first_name || "Trader Lokal";
+        document.getElementById('welcome-text').innerText = "Halo, " + userName;
+
         let isTrading = false;
         let entryPrice = 0;
-        let tradeDirection = ''; // Menyimpan status apakah user pencet BUY atau SELL
+        let tradeDirection = '';
 
-        // Inisialisasi Grafik
+        // Setup Grafik
         const chartElement = document.getElementById('chart');
         const chart = LightweightCharts.createChart(chartElement, { 
             width: chartElement.clientWidth, 
@@ -56,7 +68,7 @@
         });
         const candleSeries = chart.addCandlestickSeries();
 
-        // Data Masa Lalu
+        // Riwayat Harga Masa Lalu
         let currentPrice = 2350.00; 
         let currentTime = Math.floor(Date.now() / 1000) - (60 * 50); 
         const historyData = [];
@@ -80,7 +92,7 @@
         candleSeries.setData(historyData);
         chart.timeScale().fitContent();
 
-        // Mesin Live
+        // Mesin Simulasi Live
         setInterval(() => {
             currentTime += 60; 
             let open = currentPrice;
@@ -97,50 +109,65 @@
             });
             currentPrice = close; 
 
-            // Hitung Floating PnL berdasarkan arah Buy/Sell
             if (isTrading) {
-                let pnl = 0;
-                if (tradeDirection === 'BUY') {
-                    pnl = currentPrice - entryPrice; // Buy: Untung kalau harga naik
-                } else if (tradeDirection === 'SELL') {
-                    pnl = entryPrice - currentPrice; // Sell: Untung kalau harga turun
-                }
-
+                let pnl = tradeDirection === 'BUY' ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
                 let pnlEl = document.getElementById('pnl-display');
                 pnlEl.innerText = `Floating PnL: $${pnl.toFixed(2)}`;
                 pnlEl.style.color = pnl >= 0 ? '#26a69a' : '#ef5350';
             }
         }, 1000);
 
-        // Eksekusi Buka Posisi
         function openTrade(direction) {
             isTrading = true;
             tradeDirection = direction;
             entryPrice = currentPrice;
             
-            // Sembunyikan Buy/Sell, Munculkan Tombol Close
             document.getElementById('action-buttons').style.display = 'none';
             document.getElementById('close-btn').style.display = 'block';
             document.getElementById('pnl-display').innerText = "Floating PnL: $0.00";
         }
 
-        // Eksekusi Tutup Posisi
         function closeTrade() {
             isTrading = false;
-            let finalPnl = 0;
-            if (tradeDirection === 'BUY') {
-                finalPnl = currentPrice - entryPrice;
-            } else if (tradeDirection === 'SELL') {
-                finalPnl = entryPrice - currentPrice;
-            }
+            let finalPnl = tradeDirection === 'BUY' ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
             
-            // Kembalikan Tombol Buy/Sell, Sembunyikan Tombol Close
             document.getElementById('action-buttons').style.display = 'flex';
             document.getElementById('close-btn').style.display = 'none';
             document.getElementById('pnl-display').innerText = ""; 
             
             let status = finalPnl >= 0 ? "WIN ✅" : "LOSS ❌";
-            alert(`Trade Selesai!\nArah: ${tradeDirection}\nStatus: ${status}\nTotal PnL: $${finalPnl.toFixed(2)}`);
+
+            // Tampilkan alert lokal di HP/Browser
+            alert(`Trade Selesai!\nStatus: ${status}\nTotal PnL: $${finalPnl.toFixed(2)}`);
+
+            // PANGGIL FUNGSI KIRIM DATA KE CHANNEL
+            kirimLogKeChannel(userName, tradeDirection, status, finalPnl.toFixed(2));
+        }
+
+        // FUNGSI UTAMA DATABASE (Kirim Data via Telegram API)
+        function kirimLogKeChannel(player, posisi, hasil, pnl) {
+            // Susun teks pesan semenarik mungkin untuk papan skor
+            const pesan = `📊 *ANTI PRAKTIS ARENA LOG*\n\n` +
+                          `👤 Trader: *${player}*\n` +
+                          `🚀 Posisi: *${posisi}*\n` +
+                          `🎯 Hasil: *${hasil}*\n` +
+                          `💰 Total PnL: *$${pnl}*\n\n` +
+                          `_Data otomatis tersimpan di serverless database_`;
+
+            // Kirim data menggunakan metode fetch POST bawaan JavaScript
+            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+            
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: pesan,
+                    parse_mode: "Markdown" // Agar teks tebal (*) dan miring (_) bisa terbaca rapi
+                })
+            })
+            .then(response => console.log("Data berhasil dikirim ke database Channel!"))
+            .catch(error => console.error("Gagal mengirim data:", error));
         }
     </script>
 </body>
