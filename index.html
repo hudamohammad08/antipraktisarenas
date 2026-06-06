@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anti Praktis Arena</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body { 
+            margin: 0; padding: 20px; font-family: Arial, sans-serif; 
+            background-color: #131722; color: white; text-align: center; 
+        }
+        #chart { width: 100%; height: 350px; margin-bottom: 10px; }
+        #pnl-display { font-size: 20px; font-weight: bold; margin-bottom: 15px; height: 24px; }
+        
+        /* Layout Tombol Baru */
+        .btn-container { display: flex; gap: 10px; width: 100%; }
+        button { 
+            padding: 15px; font-size: 18px; font-weight: bold; border-radius: 8px; 
+            border: none; cursor: pointer; color: white; width: 100%;
+        }
+        .btn-buy { background-color: #26a69a; } /* Hijau */
+        .btn-sell { background-color: #ef5350; } /* Merah */
+        .btn-close { background-color: #ff9800; display: none; } /* Oranye, disembunyikan di awal */
+        
+    </style>
+</head>
+<body>
+
+    <h2>Arena Trading</h2>
+    <div id="chart"></div>
+    <div id="pnl-display"></div>
+    
+    <div class="btn-container" id="action-buttons">
+        <button class="btn-buy" onclick="openTrade('BUY')">BUY</button>
+        <button class="btn-sell" onclick="openTrade('SELL')">SELL</button>
+    </div>
+    
+    <button class="btn-close" id="close-btn" onclick="closeTrade()">CLOSE TRADE</button>
+
+    <script>
+        // Variabel Status Trading
+        let isTrading = false;
+        let entryPrice = 0;
+        let tradeDirection = ''; // Menyimpan status apakah user pencet BUY atau SELL
+
+        // Inisialisasi Grafik
+        const chartElement = document.getElementById('chart');
+        const chart = LightweightCharts.createChart(chartElement, { 
+            width: chartElement.clientWidth, 
+            height: 350,
+            layout: { backgroundColor: '#131722', textColor: '#d1d4dc' },
+            grid: { vertLines: { color: '#363c4e' }, horzLines: { color: '#363c4e' } },
+            timeScale: { timeVisible: true }
+        });
+        const candleSeries = chart.addCandlestickSeries();
+
+        // Data Masa Lalu
+        let currentPrice = 2350.00; 
+        let currentTime = Math.floor(Date.now() / 1000) - (60 * 50); 
+        const historyData = [];
+
+        for(let i = 0; i < 50; i++) {
+            let open = currentPrice;
+            let close = open + ((Math.random() - 0.5) * 4);
+            let high = Math.max(open, close) + (Math.random() * 2);
+            let low = Math.min(open, close) - (Math.random() * 2);
+            
+            historyData.push({ 
+                time: currentTime, 
+                open: parseFloat(open.toFixed(2)), 
+                high: parseFloat(high.toFixed(2)), 
+                low: parseFloat(low.toFixed(2)), 
+                close: parseFloat(close.toFixed(2)) 
+            });
+            currentPrice = close;
+            currentTime += 60; 
+        }
+        candleSeries.setData(historyData);
+        chart.timeScale().fitContent();
+
+        // Mesin Live
+        setInterval(() => {
+            currentTime += 60; 
+            let open = currentPrice;
+            let close = open + ((Math.random() - 0.5) * 4);
+            let high = Math.max(open, close) + (Math.random() * 2);
+            let low = Math.min(open, close) - (Math.random() * 2);
+
+            candleSeries.update({
+                time: currentTime, 
+                open: parseFloat(open.toFixed(2)), 
+                high: parseFloat(high.toFixed(2)), 
+                low: parseFloat(low.toFixed(2)), 
+                close: parseFloat(close.toFixed(2))
+            });
+            currentPrice = close; 
+
+            // Hitung Floating PnL berdasarkan arah Buy/Sell
+            if (isTrading) {
+                let pnl = 0;
+                if (tradeDirection === 'BUY') {
+                    pnl = currentPrice - entryPrice; // Buy: Untung kalau harga naik
+                } else if (tradeDirection === 'SELL') {
+                    pnl = entryPrice - currentPrice; // Sell: Untung kalau harga turun
+                }
+
+                let pnlEl = document.getElementById('pnl-display');
+                pnlEl.innerText = `Floating PnL: $${pnl.toFixed(2)}`;
+                pnlEl.style.color = pnl >= 0 ? '#26a69a' : '#ef5350';
+            }
+        }, 1000);
+
+        // Eksekusi Buka Posisi
+        function openTrade(direction) {
+            isTrading = true;
+            tradeDirection = direction;
+            entryPrice = currentPrice;
+            
+            // Sembunyikan Buy/Sell, Munculkan Tombol Close
+            document.getElementById('action-buttons').style.display = 'none';
+            document.getElementById('close-btn').style.display = 'block';
+            document.getElementById('pnl-display').innerText = "Floating PnL: $0.00";
+        }
+
+        // Eksekusi Tutup Posisi
+        function closeTrade() {
+            isTrading = false;
+            let finalPnl = 0;
+            if (tradeDirection === 'BUY') {
+                finalPnl = currentPrice - entryPrice;
+            } else if (tradeDirection === 'SELL') {
+                finalPnl = entryPrice - currentPrice;
+            }
+            
+            // Kembalikan Tombol Buy/Sell, Sembunyikan Tombol Close
+            document.getElementById('action-buttons').style.display = 'flex';
+            document.getElementById('close-btn').style.display = 'none';
+            document.getElementById('pnl-display').innerText = ""; 
+            
+            let status = finalPnl >= 0 ? "WIN ✅" : "LOSS ❌";
+            alert(`Trade Selesai!\nArah: ${tradeDirection}\nStatus: ${status}\nTotal PnL: $${finalPnl.toFixed(2)}`);
+        }
+    </script>
+</body>
+</html>
