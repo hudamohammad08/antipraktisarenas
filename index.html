@@ -5,284 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Anti Praktis - Backtesting Max</title>
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; background-color: #131722; color: white; }
-        body { display: flex; flex-direction: column; }
-        
-        .replay-controls { background: #1e222d; padding: 10px; display: flex; gap: 10px; align-items: center; justify-content: center; border-bottom: 1px solid #2b2b2b; flex-shrink: 0; }
-        .btn-replay { background: #2962ff; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        .btn-replay.pause { background: #ff9800; }
-        #replay-date { font-size: 12px; color: #b2b5be; margin-left: 10px; font-weight: bold; }
-
-        #chart-container { flex-grow: 1; width: 100%; position: relative; min-height: 200px; }
-        
-        .panel { padding: 12px; background: #1e222d; border-top: 1px solid #2b2b2b; flex-shrink: 0; max-height: 50%; overflow-y: auto; }
-        .info-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        #display-price { font-size: 16px; color: #ff9800; font-weight: bold; margin: 0; }
-        #display-balance { font-size: 16px; color: #2196F3; font-weight: bold; margin: 0; }
-        
-        .order-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .input-group label { font-size: 11px; color: #b2b5be; display: block; margin-bottom: 3px; }
-        .input-group input { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #363c4e; background: #131722; color: white; text-align: center; box-sizing: border-box; }
-        
-        .btn-container { display: flex; gap: 8px; margin-bottom: 10px; }
-        .btn-sell { background: #ef5350; flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
-        .btn-buy { background: #26a69a; flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
-        
-        .table-container { background: #131722; border-radius: 4px; overflow-x: auto; max-height: 120px; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
-        th { background: #1c2030; color: #787b86; padding: 6px; position: sticky; top: 0; }
-        td { padding: 6px; border-bottom: 1px solid #2b2b2b; }
-        .btn-close { background: #ff9800; border: none; padding: 3px 6px; border-radius: 3px; color: white; cursor: pointer; font-size: 10px; }
+        body { margin: 0; background: #131722; color: white; height: 100vh; display: flex; flex-direction: column; }
+        #chart { flex-grow: 1; }
+        .controls { padding: 10px; background: #1e222d; text-align: center; }
+        button { padding: 10px 20px; background: #2962ff; color: white; border: none; border-radius: 5px; }
     </style>
 </head>
 <body>
-
-    <div class="replay-controls">
-        <button class="btn-replay" id="btn-play" onclick="togglePlay()">▶️ Play</button>
-        <button class="btn-replay" onclick="nextCandle()">⏭️ Next Bar</button>
-        <div id="replay-date">Sistem Memulai... 🔄</div>
+    <div class="controls">
+        <button onclick="nextCandle()">⏭️ Next Bar (Manual)</button>
+        <div id="status" style="font-size: 12px; margin-top: 5px;">Menunggu Data CSV...</div>
     </div>
-
-    <div id="chart-container"></div>
-
-    <div class="panel">
-        <div class="info-header">
-            <h3 id="display-price">Replay Price: --</h3>
-            <h3 id="display-balance">Saldo: $10000.00</h3>
-        </div>
-        
-        <div class="order-grid">
-            <div class="input-group">
-                <label>Lot Size</label>
-                <input type="number" id="lot-size" value="0.10" step="0.01">
-            </div>
-            <div class="input-group">
-                <label>Stop Loss (Harga)</label>
-                <input type="number" id="sl-val" value="0.00" step="0.01">
-            </div>
-            <div class="input-group">
-                <label>Take Profit (Harga)</label>
-                <input type="number" id="tp-val" value="0.00" step="0.01">
-            </div>
-        </div>
-        
-        <div class="btn-container">
-            <button class="btn-sell" onclick="openTrade('SELL')">SELL</button>
-            <button class="btn-buy" onclick="openTrade('BUY')">BUY</button>
-        </div>
-
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Posisi</th><th>Lot</th><th>Entry</th><th>PnL ($)</th><th>Aksi</th></tr></thead>
-                <tbody id="trade-body"></tbody>
-            </table>
-        </div>
-    </div>
+    <div id="chart"></div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.enableClosingConfirmation();
-        
-        let chart, candleSeries;
-        let historicalData = [];
-        let currentCandleIndex = 0; 
-        let isPlaying = false;
-        let playInterval;
-        let currentPrice = 0; 
-        
-        let balance = 10000.00;
-        let openTrades = [];
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pubhtml";
+        let chart, candleSeries, data = [], index = 0;
 
-        function initChart() {
+        // Inisialisasi Grafik
+        chart = LightweightCharts.createChart(document.getElementById('chart'), { width: window.innerWidth, height: 300 });
+        candleSeries = chart.addCandlestickSeries();
+
+        async function loadData() {
             try {
-                if (typeof LightweightCharts === 'undefined') {
-                    throw new Error("Library UI Gagal Dimuat.");
-                }
-
-                const chartContainer = document.getElementById('chart-container');
-                chart = LightweightCharts.createChart(chartContainer, {
-                    layout: { background: { type: 'solid', color: '#131722' }, textColor: '#d1d4dc' },
-                    grid: { vertLines: { color: '#2b2b2b' }, horzLines: { color: '#2b2b2b' } },
-                    timeScale: { timeVisible: true, secondsVisible: false }
+                const res = await fetch(CSV_URL);
+                const text = await res.text();
+                // Parsing CSV sederhana
+                data = text.split('\n').slice(1).map(row => {
+                    const [time, open, high, low, close] = row.split(',');
+                    return { time: parseInt(time), open: parseFloat(open), high: parseFloat(high), low: parseFloat(low), close: parseFloat(close) };
                 });
-                
-                candleSeries = chart.addCandlestickSeries({
-                    upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
-                    wickUpColor: '#26a69a', wickDownColor: '#ef5350'
-                });
-
-                if (window.ResizeObserver) {
-                    new ResizeObserver(entries => {
-                        if (entries.length === 0 || entries[0].target !== chartContainer) return;
-                        const newRect = entries[0].contentRect;
-                        chart.applyOptions({ height: newRect.height, width: newRect.width });
-                    }).observe(chartContainer);
-                }
-                
-                return true;
-            } catch (error) {
-                document.getElementById('replay-date').innerText = "ERROR UI: " + error.message;
-                document.getElementById('replay-date').style.color = "#ef5350";
-                return false;
-            }
-        }
-
-        async function fetchHistory() {
-            // MENGGUNAKAN KUCOIN API (Paling Aman di Indonesia)
-            const url = `https://api.kucoin.com/api/v1/market/candles?type=1hour&symbol=BTC-USDT`;
-            
-            try {
-                document.getElementById('replay-date').innerText = "Menarik Data Pasar... ⏳";
-                
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("Koneksi API Gagal");
-                
-                const json = await response.json();
-                if (json.code !== "200000") throw new Error("Data ditolak bursa");
-                
-                // KuCoin mengirim data dari baru ke lama, harus dibalik
-                const data = json.data.reverse();
-                
-                historicalData = data.map(d => ({
-                    time: parseInt(d[0]), 
-                    open: parseFloat(d[1]),
-                    high: parseFloat(d[3]),
-                    low: parseFloat(d[4]),
-                    close: parseFloat(d[2])
-                }));
-
-                if (historicalData.length > 50) {
-                    let initialData = historicalData.slice(0, 50);
-                    candleSeries.setData(initialData);
-                    currentCandleIndex = 50; 
-                    updatePriceDisplay();
-                } else {
-                    document.getElementById('replay-date').innerText = "Data tidak cukup.";
-                }
-                
-            } catch (err) { 
-                document.getElementById('replay-date').innerText = "ERROR API: " + err.message;
-                document.getElementById('replay-date').style.color = "#ef5350";
-            }
-        }
-
-        function togglePlay() {
-            if (historicalData.length === 0) return alert("Belum ada data.");
-            
-            isPlaying = !isPlaying;
-            let btn = document.getElementById('btn-play');
-            
-            if (isPlaying) {
-                btn.innerText = "⏸️ Pause";
-                btn.classList.add('pause');
-                playInterval = setInterval(nextCandle, 1000); 
-            } else {
-                btn.innerText = "▶️ Play";
-                btn.classList.remove('pause');
-                clearInterval(playInterval);
+                document.getElementById('status').innerText = "Data Siap! Klik Next Bar";
+            } catch(e) {
+                document.getElementById('status').innerText = "Gagal Baca CSV: " + e.message;
             }
         }
 
         function nextCandle() {
-            if (historicalData.length === 0) return;
-
-            if (currentCandleIndex < historicalData.length) {
-                let newCandle = historicalData[currentCandleIndex];
-                candleSeries.update(newCandle); 
-                currentCandleIndex++;
-                updatePriceDisplay();
-                checkTrades(); 
-            } else {
-                if(isPlaying) togglePlay();
-                document.getElementById('replay-date').innerText = "🏁 Simulasi Selesai";
+            if(index < data.length) {
+                candleSeries.update(data[index]);
+                index++;
             }
         }
 
-        function updatePriceDisplay() {
-            if(currentCandleIndex === 0) return;
-            let activeCandle = historicalData[currentCandleIndex - 1];
-            currentPrice = activeCandle.close; 
-            
-            let dateObj = new Date(activeCandle.time * 1000);
-            document.getElementById('replay-date').innerText = dateObj.toLocaleString('id-ID');
-            document.getElementById('display-price').innerText = `BTCUSDT Replay: $${currentPrice.toFixed(2)}`;
-            
-            renderTable(); 
-        }
-
-        function openTrade(dir) {
-            if (currentPrice <= 0) return alert("Harga belum siap.");
-            
-            let lot = parseFloat(document.getElementById('lot-size').value) || 0.1;
-            let sl = parseFloat(document.getElementById('sl-val').value) || 0;
-            let tp = parseFloat(document.getElementById('tp-val').value) || 0;
-
-            let trade = {
-                id: Date.now(),
-                dir: dir,
-                lot: lot,
-                entry: currentPrice,
-                sl: sl,
-                tp: tp
-            };
-            openTrades.push(trade);
-            renderTable();
-        }
-
-        function checkTrades() {
-            for (let i = openTrades.length - 1; i >= 0; i--) {
-                let t = openTrades[i];
-                if (t.sl > 0) {
-                    if ((t.dir === 'BUY' && currentPrice <= t.sl) || (t.dir === 'SELL' && currentPrice >= t.sl)) { closeTrade(t.id); continue; }
-                }
-                if (t.tp > 0) {
-                    if ((t.dir === 'BUY' && currentPrice >= t.tp) || (t.dir === 'SELL' && currentPrice <= t.tp)) { closeTrade(t.id); continue; }
-                }
-            }
-        }
-
-        function closeTrade(id) {
-            let index = openTrades.findIndex(t => t.id === id);
-            if (index === -1) return;
-            
-            let t = openTrades[index];
-            let pnl = t.dir === 'BUY' ? (currentPrice - t.entry) : (t.entry - currentPrice);
-            let finalPnl = pnl * t.lot; 
-            
-            balance += finalPnl;
-            document.getElementById('display-balance').innerText = `Saldo: $${balance.toFixed(2)}`;
-            
-            openTrades.splice(index, 1);
-            renderTable();
-        }
-
-        function renderTable() {
-            let html = "";
-            openTrades.forEach(t => {
-                let pnl = t.dir === 'BUY' ? (currentPrice - t.entry) : (t.entry - currentPrice);
-                let finalPnl = pnl * t.lot;
-                let color = finalPnl >= 0 ? '#26a69a' : '#ef5350';
-                
-                html += `<tr>
-                    <td><strong style="color:${t.dir==='BUY'?'#26a69a':'#ef5350'}">${t.dir}</strong></td>
-                    <td>${t.lot}</td>
-                    <td>${t.entry.toFixed(2)}</td>
-                    <td style="color:${color}; font-weight:bold;">${finalPnl >= 0 ? '+':''}$${finalPnl.toFixed(2)}</td>
-                    <td><button class="btn-close" onclick="closeTrade(${t.id})">X</button></td>
-                </tr>`;
-            });
-            if(openTrades.length === 0) {
-                html = `<tr><td colspan="5" style="text-align:center; color:#787b86;">Tidak ada posisi aktif</td></tr>`;
-            }
-            document.getElementById('trade-body').innerHTML = html;
-        }
-
-        if (initChart()) {
-            fetchHistory();
-        }
+        loadData();
     </script>
 </body>
 </html>
