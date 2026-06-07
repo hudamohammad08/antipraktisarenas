@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Anti Praktis - Backtesting Max</title>
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; background-color: #131722; color: white; }
@@ -104,7 +104,7 @@
 
                 const chartContainer = document.getElementById('chart-container');
                 chart = LightweightCharts.createChart(chartContainer, {
-                    layout: { backgroundColor: '#131722', textColor: '#d1d4dc' },
+                    layout: { background: { type: 'solid', color: '#131722' }, textColor: '#d1d4dc' },
                     grid: { vertLines: { color: '#2b2b2b' }, horzLines: { color: '#2b2b2b' } },
                     timeScale: { timeVisible: true, secondsVisible: false }
                 });
@@ -131,7 +131,7 @@
         }
 
         async function fetchHistory() {
-            // MENGGUNAKAN KUCOIN API (Tidak diblokir oleh Kominfo)
+            // MENGGUNAKAN KUCOIN API (Paling Aman di Indonesia)
             const url = `https://api.kucoin.com/api/v1/market/candles?type=1hour&symbol=BTC-USDT`;
             
             try {
