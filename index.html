@@ -15,7 +15,6 @@
         .btn-replay.pause { background: #ff9800; }
         #replay-date { font-size: 12px; color: #b2b5be; margin-left: 10px; font-weight: bold; }
 
-        /* Pastikan container grafik memiliki ukuran pasti */
         #chart-container { flex-grow: 1; width: 100%; position: relative; min-height: 200px; }
         
         .panel { padding: 12px; background: #1e222d; border-top: 1px solid #2b2b2b; flex-shrink: 0; max-height: 50%; overflow-y: auto; }
@@ -43,7 +42,7 @@
     <div class="replay-controls">
         <button class="btn-replay" id="btn-play" onclick="togglePlay()">▶️ Play</button>
         <button class="btn-replay" onclick="nextCandle()">⏭️ Next Bar</button>
-        <div id="replay-date">Menarik Data... 🔄</div>
+        <div id="replay-date">Menyambungkan Server... 🔄</div>
     </div>
 
     <div id="chart-container"></div>
@@ -60,11 +59,11 @@
                 <input type="number" id="lot-size" value="0.10" step="0.01">
             </div>
             <div class="input-group">
-                <label>Stop Loss</label>
+                <label>Stop Loss (Harga)</label>
                 <input type="number" id="sl-val" value="0.00" step="0.01">
             </div>
             <div class="input-group">
-                <label>Take Profit</label>
+                <label>Take Profit (Harga)</label>
                 <input type="number" id="tp-val" value="0.00" step="0.01">
             </div>
         </div>
@@ -110,7 +109,6 @@
                 wickUpColor: '#26a69a', wickDownColor: '#ef5350'
             });
 
-            // Auto Resize agar grafik pas di layar HP
             new ResizeObserver(entries => {
                 if (entries.length === 0 || entries[0].target !== chartContainer) return;
                 const newRect = entries[0].contentRect;
@@ -119,29 +117,26 @@
         }
 
         async function fetchHistory() {
-            // Menggunakan jalur API sekunder Binance yang lebih aman dari blokir Kominfo
-            const url = `https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=500`;
+            // MENGGUNAKAN CRYPTOCOMPARE API (ANTI-BLOKIR KOMINFO)
+            // Mengambil 500 data candlestick 1 Jam (BTC to USD)
+            const url = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500`;
             
             try {
+                document.getElementById('replay-date').innerText = "Menarik Data API... ⏳";
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Gagal mengambil data");
-                const data = await response.json();
+                const json = await response.json();
                 
-                // Membersihkan duplikasi atau data error
-                let lastTime = 0;
-                data.forEach(d => {
-                    let timeSec = Math.floor(d[0] / 1000);
-                    if (timeSec > lastTime) {
-                        historicalData.push({
-                            time: timeSec,
-                            open: parseFloat(d[1]),
-                            high: parseFloat(d[2]),
-                            low: parseFloat(d[3]),
-                            close: parseFloat(d[4])
-                        });
-                        lastTime = timeSec;
-                    }
-                });
+                const data = json.Data.Data; 
+                
+                // Format data untuk Lightweight Charts
+                historicalData = data.map(d => ({
+                    time: d.time, 
+                    open: d.open,
+                    high: d.high,
+                    low: d.low,
+                    close: d.close
+                }));
 
                 if (historicalData.length > 50) {
                     let initialData = historicalData.slice(0, 50);
@@ -149,24 +144,25 @@
                     currentCandleIndex = 50; 
                     updatePriceDisplay();
                 } else {
-                    document.getElementById('replay-date').innerText = "Data tidak cukup.";
+                    document.getElementById('replay-date').innerText = "Data Kosong.";
                 }
                 
             } catch (err) { 
-                document.getElementById('replay-date').innerText = "Gagal memuat (Koneksi Terblokir).";
+                document.getElementById('replay-date').innerText = "Gagal Memuat Jaringan ❌";
                 document.getElementById('replay-date').style.color = "#ef5350";
             }
         }
 
         function togglePlay() {
-            if (historicalData.length === 0) return;
+            if (historicalData.length === 0) return alert("Menunggu data dimuat, pastikan internet lancar.");
+            
             isPlaying = !isPlaying;
             let btn = document.getElementById('btn-play');
             
             if (isPlaying) {
                 btn.innerText = "⏸️ Pause";
                 btn.classList.add('pause');
-                playInterval = setInterval(nextCandle, 1000); // Kecepatan Replay (1 detik per candle)
+                playInterval = setInterval(nextCandle, 1000); 
             } else {
                 btn.innerText = "▶️ Play";
                 btn.classList.remove('pause');
@@ -175,6 +171,8 @@
         }
 
         function nextCandle() {
+            if (historicalData.length === 0) return alert("Menunggu data dimuat...");
+
             if (currentCandleIndex < historicalData.length) {
                 let newCandle = historicalData[currentCandleIndex];
                 candleSeries.update(newCandle); 
@@ -183,7 +181,7 @@
                 checkTrades(); 
             } else {
                 if(isPlaying) togglePlay();
-                document.getElementById('replay-date').innerText = "🏁 Simulasi Selesai";
+                document.getElementById('replay-date').innerText = "🏁 Simulasi Selesai (Data Habis)";
             }
         }
 
@@ -194,13 +192,13 @@
             
             let dateObj = new Date(activeCandle.time * 1000);
             document.getElementById('replay-date').innerText = dateObj.toLocaleString('id-ID');
-            document.getElementById('display-price').innerText = `BTCUSDT Replay: $${currentPrice.toFixed(2)}`;
+            document.getElementById('display-price').innerText = `BTCUSD Replay: $${currentPrice.toFixed(2)}`;
             
             renderTable(); 
         }
 
         function openTrade(dir) {
-            if (currentPrice <= 0) return;
+            if (currentPrice <= 0) return alert("Harga belum dimuat!");
             
             let lot = parseFloat(document.getElementById('lot-size').value) || 0.1;
             let sl = parseFloat(document.getElementById('sl-val').value) || 0;
