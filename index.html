@@ -1,20 +1,406 @@
-<div class="panel">
-    <div style="padding: 15px; background: #2a2e39; border-radius: 8px; text-align: center;">
-        <h4 style="margin: 0 0 10px 0; color: #fff;">Pilih Tanggal Backtest</h4>
-        <p style="font-size: 12px; color: #b2b5be; margin-bottom: 15px;">
-            Gunakan fitur Replay resmi untuk memilih tanggal dan waktu secara bebas.
-        </p>
-        <button onclick="openReplay()" style="background: #2962ff; color: white; border: none; padding: 12px 20px; border-radius: 6px; width: 100%; font-weight: bold;">
-            🚀 Buka Simulator Tanggal
-        </button>
-    </div>
-</div>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anti Praktis Arena - Multi Terminal</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <style>
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: #131722; color: white; }
+        body { display: flex; flex-direction: column; }
+        
+        /* Area Chart TV */
+        #tradingview_widget { flex-grow: 1; width: 100%; display: none; }
+        
+        /* Dashboard Control Panel */
+        .panel { padding: 12px; background: #1e222d; border-top: 1px solid #2b2b2b; flex-shrink: 0; display: none; max-height: 60%; overflow-y: auto; box-sizing: border-box; }
+        
+        .info-header { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+        #display-price { font-size: 16px; color: #ff9800; font-weight: bold; margin: 0; }
+        #display-balance { font-size: 16px; color: #2196F3; font-weight: bold; margin: 0; }
+        
+        /* Form Order Grid */
+        .order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 11px; color: #b2b5be; margin-bottom: 3px; }
+        .input-group input, .input-group select { padding: 6px; border-radius: 4px; border: 1px solid #363c4e; background: #131722; color: white; font-weight: bold; text-align: center; font-size: 13px; box-sizing: border-box; }
+        .inline-inputs { display: flex; gap: 4px; }
+        .inline-inputs select { width: 40%; text-align: center; padding: 4px; }
+        .inline-inputs input { width: 60%; }
 
-<script>
-    function openReplay() {
-        // Ini adalah link TradingView dengan fitur replay yang bisa dipilih tanggalnya
-        const url = "https://id.tradingview.com/chart/mueJgm1U/?symbol=VANTAGE%3AXAUUSD"; 
-        window.open(url, '_blank');
-        alert("Pilih ikon 'Replay' (dua panah) di bagian atas grafik untuk memilih tanggal!");
-    }
-</script>
+        .btn-container { display: flex; gap: 8px; margin-bottom: 12px; }
+        button { flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .btn-sell { background: #ef5350; }
+        .btn-buy { background: #26a69a; }
+        
+        /* Tabel Terminal Trading */
+        .terminal-container { border-top: 1px solid #363c4e; padding-top: 8px; margin-top: 5px; }
+        .terminal-title { font-size: 12px; color: #b2b5be; margin: 0 0 6px 0; text-align: left; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .table-scroll { overflow-x: auto; max-height: 120px; overflow-y: auto; background: #131722; border-radius: 4px; border: 1px solid #2b2b2b; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; min-width: 450px; }
+        th { background: #1c2030; color: #787b86; padding: 6px 8px; font-weight: normal; border-bottom: 1px solid #2b2b2b; }
+        td { padding: 6px 8px; border-bottom: 1px solid #232733; vertical-align: middle; }
+        .badge-buy { color: #26a69a; font-weight: bold; }
+        .badge-sell { color: #ef5350; font-weight: bold; }
+        .btn-row-close { background: #ff9800; padding: 3px 6px; font-size: 10px; border-radius: 3px; width: auto; display: inline-block; }
+
+        #loading-screen { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 16px; color: #b2b5be; text-align: center; padding: 20px; }
+
+        /* Admin CSS */
+        #admin-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); padding: 6px 10px; border-radius: 4px; font-size: 12px; z-index: 100; border: 1px solid #363c4e; color: white; }
+        #admin-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(19, 23, 34, 0.96); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .admin-box { background: #1e222d; padding: 20px; border-radius: 8px; width: 100%; max-width: 360px; border: 1px solid #363c4e; text-align: center; }
+        .admin-box select { width: 100%; padding: 8px; margin-bottom: 12px; background: #131722; color: white; border: 1px solid #363c4e; border-radius: 4px; box-sizing: border-box; }
+        .btn-admin-save { background: #2962ff; margin-bottom: 8px; }
+        .btn-admin-sheet { background: #00c853; margin-bottom: 8px; }
+        .btn-admin-close { background: #787b86; }
+    </style>
+</head>
+<body>
+
+    <button id="admin-btn" onclick="openAdmin()">⚙️ Admin</button>
+
+    <div id="admin-modal">
+        <div class="admin-box">
+            <h2>⚙️ Panel Admin</h2>
+            <button class="btn-admin-sheet" onclick="openGoogleSheet()">📝 Buka Google Sheets</button>
+            <hr style="border-color: #363c4e; margin: 15px 0;">
+            <p style="font-size: 13px; color: #b2b5be; margin-bottom: 8px;">Ganti Aset Instan:</p>
+            <select id="local-symbol">
+                <option value="FX:XAUUSD">Emas (XAUUSD)</option>
+                <option value="BINANCE:BTCUSDT">Bitcoin (BTCUSDT)</option>
+                <option value="BINANCE:ETHUSDT">Ethereum (ETHUSDT)</option>
+            </select>
+            <button class="btn-admin-save" onclick="applyLocalSymbol()">Terapkan Sementara</button>
+            <button class="btn-admin-close" onclick="closeAdmin()">Tutup Panel</button>
+        </div>
+    </div>
+
+    <div id="loading-screen">Menyambungkan ke Server... 🔄</div>
+
+    <div id="tradingview_widget"></div>
+
+    <div class="panel" id="main-panel">
+        <div class="info-header">
+            <h3 id="display-price">Harga: --</h3>
+            <h3 id="display-balance">Saldo: $0.00</h3>
+        </div>
+        
+        <div class="order-grid">
+            <div class="input-group">
+                <label>Lot Size Volume</label>
+                <input type="number" id="lot-size" value="0.10" step="0.01" min="0.01">
+            </div>
+            <div class="input-group">
+                <label>Harga Entry (0 = Pasar)</label>
+                <input type="number" id="entry-price" value="0.00" step="0.01">
+            </div>
+            <div class="input-group">
+                <label>Stop Loss (SL)</label>
+                <div class="inline-inputs">
+                    <select id="sl-type">
+                        <option value="PRICE">Harga</option>
+                        <option value="DOLLAR">Uang $</option>
+                    </select>
+                    <input type="number" id="sl-val" value="0.00" step="0.01">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Take Profit (TP)</label>
+                <div class="inline-inputs">
+                    <select id="tp-type">
+                        <option value="PRICE">Harga</option>
+                        <option value="DOLLAR">Uang $</option>
+                    </select>
+                    <input type="number" id="tp-val" value="0.00" step="0.01">
+                </div>
+            </div>
+        </div>
+        
+        <div class="btn-container">
+            <button class="btn-sell" onclick="createOrder('SELL')">SELL</button>
+            <button class="btn-buy" onclick="createOrder('BUY')">BUY</button>
+        </div>
+
+        <div class="terminal-container">
+            <p class="terminal-title">Posisi Terbuka Terminal</p>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Aset/Posisi</th>
+                            <th>Lot</th>
+                            <th>Harga Entry</th>
+                            <th>Harga Live</th>
+                            <th>Profit/Loss ($)</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="terminal-body">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================================
+        // KONEKSI DATABASE & SAKRAL KREATOR
+        // ========================================================
+        const LINK_CSV_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pub?output=csv";
+        const LINK_EDIT_SHEET = "https://docs.google.com/spreadsheets/d/1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/edit"; 
+        const BOT_TOKEN = "8776331759:AAFVup_qefWDme_yz7PYUvzDcXJNlJ70yLU";
+        const CHAT_ID = "-1003742641612";
+        const ADMIN_PIN = "1234";
+        // ========================================================
+
+        const tg = window.Telegram.WebApp;
+        tg.expand(); 
+        tg.enableClosingConfirmation(); 
+        tg.ready();
+        
+        const userName = tg.initDataUnsafe?.user?.first_name || "Trader";
+
+        // MENGAMBIL SALDO DARI LOCALSTORAGE
+        let balance = parseFloat(localStorage.getItem('arena_balance'));
+        if (isNaN(balance)) { balance = 10000.00; localStorage.setItem('arena_balance', balance); }
+        updateBalanceUI();
+
+        let currentPrice = 0;
+        let activeSymbol = "FX:XAUUSD"; 
+        let priceInterval;
+        let coreEngineInterval;
+        
+        // ARRAY PENYIMPANAN RIWAYAT POSISI AKTIF (MULTI-TRADE)
+        let openTrades = [];
+
+        function updateBalanceUI() {
+            document.getElementById('display-balance').innerText = `Saldo: $${balance.toFixed(2)}`;
+        }
+
+        function openAdmin() {
+            let pin = prompt("Masukkan PIN Admin:");
+            if (pin === ADMIN_PIN) document.getElementById('admin-modal').style.display = 'flex';
+        }
+        function closeAdmin() { document.getElementById('admin-modal').style.display = 'none'; }
+        function openGoogleSheet() { window.open(LINK_EDIT_SHEET, '_blank'); }
+        function applyLocalSymbol() { activeSymbol = document.getElementById('local-symbol').value; closeAdmin(); startGame(); }
+
+        async function fetchAdminSettings() {
+            try {
+                const response = await fetch(LINK_CSV_GOOGLE_SHEET + "&t=" + new Date().getTime());
+                const data = await response.text();
+                const rows = data.split('\n');
+                const config = {};
+                rows.forEach(row => {
+                    const columns = row.split(',');
+                    if(columns.length >= 2) config[columns[0].trim()] = columns[1].trim();
+                });
+                if(config.Aset) activeSymbol = config.Aset;
+                startGame();
+            } catch (error) { setTimeout(startGame, 2000); }
+        }
+
+        function startGame() {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('tradingview_widget').style.display = 'block';
+            document.getElementById('main-panel').style.display = 'block';
+            document.getElementById('tradingview_widget').innerHTML = "";
+
+            new TradingView.widget({
+                "autosize": true, "symbol": activeSymbol, "interval": "1", "timezone": "Asia/Jakarta",
+                "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false,
+                "hide_top_toolbar": false, "hide_legend": false, "hide_side_toolbar": false, 
+                "allow_symbol_change": false, "save_image": false, "container_id": "tradingview_widget"
+            });
+
+            if (priceInterval) clearInterval(priceInterval);
+            fetchLivePrice();
+            priceInterval = setInterval(fetchLivePrice, 1000);
+
+            // JALANKAN MESIN UTAMA PENGAWAS SL/TP DAN UPDATE TABEL TERMINAL
+            if (coreEngineInterval) clearInterval(coreEngineInterval);
+            coreEngineInterval = setInterval(runCoreEngine, 1000);
+        }
+
+        function fetchLivePrice() {
+            let fetchSymbol = activeSymbol.includes('XAU') ? 'PAXGUSDT' : (activeSymbol.includes('BTC') ? 'BTCUSDT' : (activeSymbol.includes('ETH') ? 'ETHUSDT' : ''));
+            if (fetchSymbol !== "") {
+                fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${fetchSymbol}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if(d.price) {
+                            currentPrice = parseFloat(d.price);
+                            let displayName = activeSymbol.split(':')[1] || activeSymbol;
+                            document.getElementById('display-price').innerText = `${displayName}: $${currentPrice.toFixed(2)}`;
+                        }
+                    }).catch(() => {});
+            }
+        }
+
+        // --- SISTEM ORDER & LOGIKA MATEMATIKA STRUKTUR TRADING ---
+        function createOrder(dir) {
+            if (currentPrice <= 0) { alert("Tunggu sebentar, data harga live belum terkoneksi..."); return; }
+
+            let lot = parseFloat(document.getElementById('lot-size').value) || 0.1;
+            let manualEntry = parseFloat(document.getElementById('entry-price').value) || 0;
+            let slVal = parseFloat(document.getElementById('sl-val').value) || 0;
+            let slType = document.getElementById('sl-type').value;
+            let tpVal = parseFloat(document.getElementById('tp-val').value) || 0;
+            let tpType = document.getElementById('tp-type').value;
+
+            let ePrice = manualEntry > 0 ? manualEntry : currentPrice;
+            let multiplier = activeSymbol.includes('XAU') ? 100 : 1;
+
+            // KALKULASI HARGA ABSOLUT UNTUK STOP LOSS (SL)
+            let calculatedSL = 0;
+            if (slVal > 0) {
+                if (slType === 'PRICE') {
+                    calculatedSL = slVal;
+                } else { // Jika tipe Dollar ($)
+                    let pPoints = slVal / (lot * multiplier);
+                    calculatedSL = dir === 'BUY' ? (ePrice - pPoints) : (ePrice + pPoints);
+                }
+            }
+
+            // KALKULASI HARGA ABSOLUT UNTUK TAKE PROFIT (TP)
+            let calculatedTP = 0;
+            if (tpVal > 0) {
+                if (tpType === 'PRICE') {
+                    calculatedTP = tpVal;
+                } else { // Jika tipe Dollar ($)
+                    let pPoints = tpVal / (lot * multiplier);
+                    calculatedTP = dir === 'BUY' ? (ePrice + pPoints) : (ePrice - pPoints);
+                }
+            }
+
+            // BUAT OBJEK TRANSAKSI UNTUK TABEL TERMINAL
+            let newTrade = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                symbol: activeSymbol,
+                displayName: activeSymbol.split(':')[1] || activeSymbol,
+                dir: dir,
+                lot: lot,
+                entryPrice: ePrice,
+                slPrice: calculatedSL,
+                tpPrice: calculatedTP,
+                multiplier: multiplier
+            };
+
+            openTrades.push(newTrade);
+            renderTerminal();
+
+            // KIRIM STRUK OPEN KE CHANNEL TELEGRAM
+            let msg = `🚀 *TRADE OPEN*\n👤 Trader: *${userName}*\n📈 Asset: *${newTrade.displayName}*\n🛒 Posisi: *${dir}* (${lot} Lot)\n🚪 Entry Price: *$${ePrice.toFixed(2)}*\n🛑 SL Target: ${calculatedSL > 0 ? '$'+calculatedSL.toFixed(2) : 'Tanpa SL'}\n🎯 TP Target: ${calculatedTP > 0 ? '$'+calculatedTP.toFixed(2) : 'Tanpa TP'}`;
+            sendToChannel(msg);
+
+            // RESET INPUT INPUT UNTUK MEMUDAHKAN ORDER BERIKUTNYA
+            document.getElementById('entry-price').value = "0.00";
+            document.getElementById('sl-val').value = "0.00";
+            document.getElementById('tp-val').value = "0.00";
+        }
+
+        // --- MESIN PENGURUS RIWAYAT TABEL & AUTO CLOSING ---
+        function runCoreEngine() {
+            if (openTrades.length === 0) {
+                document.getElementById('terminal-body').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#787b86; padding:15px;">Tidak ada posisi berjalan. terminal kosong.</td></tr>`;
+                return;
+            }
+
+            let tbody = document.getElementById('terminal-body');
+            let html = "";
+
+            // LOOP MENGECEK SETIAP TRANSKASI AKTIF SATU PER SATU
+            for (let i = openTrades.length - 1; i >= 0; i--) {
+                let trade = openTrades[i];
+                
+                // Hitung Floating Untung/Rugi secara real-time
+                let pnlPoints = trade.dir === 'BUY' ? (currentPrice - trade.entryPrice) : (trade.entryPrice - currentPrice);
+                let currentPnL = pnlPoints * trade.lot * trade.multiplier;
+
+                // SISTEM DETEKSI OTOMATIS AUTO CLOSE (HIT SL / HIT TP)
+                if (trade.slPrice > 0) {
+                    if ((trade.dir === 'BUY' && currentPrice <= trade.slPrice) || (trade.dir === 'SELL' && currentPrice >= trade.slPrice)) {
+                        closeTradeEngine(trade.id, 'Hit SL');
+                        continue;
+                    }
+                }
+                if (trade.tpPrice > 0) {
+                    if ((trade.dir === 'BUY' && currentPrice >= trade.tpPrice) || (trade.dir === 'SELL' && currentPrice <= trade.tpPrice)) {
+                        closeTradeEngine(trade.id, 'Hit TP');
+                        continue;
+                    }
+                }
+
+                // RENDERING ROW BARIS TABEL VISUAL USER
+                let pnlStyle = currentPnL >= 0 ? "color:#26a69a; font-weight:bold;" : "color:#ef5350; font-weight:bold;";
+                let dirClass = trade.dir === 'BUY' ? 'badge-buy' : 'badge-sell';
+
+                html += `<tr>
+                    <td>${trade.displayName} <span class="${dirClass}">[${trade.dir}]</span></td>
+                    <td>${trade.lot.toFixed(2)}</td>
+                    <td>$${trade.entryPrice.toFixed(2)}</td>
+                    <td>$${currentPrice.toFixed(2)}</td>
+                    <td style="${pnlStyle}">${currentPnL >= 0 ? '+' : ''}$${currentPnL.toFixed(2)}</td>
+                    <td><button class="btn-row-close" onclick="closeTradeEngine(${trade.id}, 'MANUAL')">CLOSE</button></td>
+                </tr>`;
+            }
+
+            if(html !== "") tbody.innerHTML = html;
+        }
+
+        function renderTerminal() {
+            if (openTrades.length === 0) {
+                document.getElementById('terminal-body').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#787b86; padding:15px;">Tidak ada posisi berjalan. terminal kosong.</td></tr>`;
+            }
+        }
+
+        function closeTradeEngine(id, reason) {
+            let tradeIndex = openTrades.findIndex(t => t.id === id);
+            if (tradeIndex === -1) return;
+
+            let trade = openTrades[tradeIndex];
+            let pnlPoints = trade.dir === 'BUY' ? (currentPrice - trade.entryPrice) : (trade.entryPrice - currentPrice);
+            let finalPnL = pnlPoints * trade.lot * trade.multiplier;
+
+            // AKUMULASI PNL KE SALDO AKUN UTAMA
+            balance += finalPnL;
+            if (balance <= 0) {
+                alert("🚨 MARGIN CALL! Saldo Anda hancur total. Akun di-reset otomatis ke $10,000.");
+                balance = 10000.00;
+            }
+            localStorage.setItem('arena_balance', balance);
+            updateBalanceUI();
+
+            // KELUARKAN DATA DARI LIST RIWAYAT BERJALAN
+            openTrades.splice(tradeIndex, 1);
+            renderTerminal();
+
+            // FORMAT LAPORAN PERSIS SESUAI PERMINTAAN REVISI ANDA
+            let resultStatus = finalPnL >= 0 ? "WIN ✅" : "LOSS ❌";
+            let telegramMsg = `📊 *TRADE REPORT*\n\n`+
+                              `👤 Trader: *${userName}*\n`+
+                              `📈 Asset: *${trade.displayName}*\n`+
+                              `🛒 Posisi: *${trade.dir}* (${trade.lot.toFixed(2)} Lot)\n`+
+                              `🎯 Reason: *${reason === 'MANUAL' ? 'Closed Manual' : reason}*\n`+
+                              `🚪 Entry Price: *$${trade.entryPrice.toFixed(2)}*\n`+
+                              `🚪 Exit Price: *$${currentPrice.toFixed(2)}*\n`+
+                              `📉 Hasil: *${resultStatus}*\n`+
+                              `💰 PnL: *$${finalPnL.toFixed(2)}*\n`+
+                              `💼 Saldo Akhir: *$${balance.toFixed(2)}*`;
+
+            sendToChannel(telegramMsg);
+        }
+
+        function sendToChannel(msg) {
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: "Markdown" })
+            });
+        }
+
+        fetchAdminSettings();
+    </script>
+</body>
+</html>
