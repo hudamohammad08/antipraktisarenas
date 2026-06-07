@@ -3,404 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anti Praktis Arena - Multi Terminal</title>
+    <title>Anti Praktis - Backtesting Max</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: #131722; color: white; }
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; background-color: #131722; color: white; }
         body { display: flex; flex-direction: column; }
         
-        /* Area Chart TV */
-        #tradingview_widget { flex-grow: 1; width: 100%; display: none; }
+        /* Area Kontrol Replay (Di Atas Grafik) */
+        .replay-controls { background: #1e222d; padding: 10px; display: flex; gap: 10px; align-items: center; justify-content: center; border-bottom: 1px solid #2b2b2b; }
+        .btn-replay { background: #2962ff; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .btn-replay.pause { background: #ff9800; }
+        #replay-date { font-size: 12px; color: #b2b5be; margin-left: 10px; }
+
+        /* Area Grafik */
+        #chart-container { flex-grow: 1; width: 100%; position: relative; }
         
-        /* Dashboard Control Panel */
-        .panel { padding: 12px; background: #1e222d; border-top: 1px solid #2b2b2b; flex-shrink: 0; display: none; max-height: 60%; overflow-y: auto; box-sizing: border-box; }
-        
-        .info-header { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+        /* Panel Trading Bawah */
+        .panel { padding: 12px; background: #1e222d; border-top: 1px solid #2b2b2b; flex-shrink: 0; max-height: 50%; overflow-y: auto; }
+        .info-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
         #display-price { font-size: 16px; color: #ff9800; font-weight: bold; margin: 0; }
         #display-balance { font-size: 16px; color: #2196F3; font-weight: bold; margin: 0; }
         
-        /* Form Order Grid */
         .order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .input-group { display: flex; flex-direction: column; }
-        .input-group label { font-size: 11px; color: #b2b5be; margin-bottom: 3px; }
-        .input-group input, .input-group select { padding: 6px; border-radius: 4px; border: 1px solid #363c4e; background: #131722; color: white; font-weight: bold; text-align: center; font-size: 13px; box-sizing: border-box; }
-        .inline-inputs { display: flex; gap: 4px; }
-        .inline-inputs select { width: 40%; text-align: center; padding: 4px; }
-        .inline-inputs input { width: 60%; }
-
-        .btn-container { display: flex; gap: 8px; margin-bottom: 12px; }
-        button { flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; }
-        .btn-sell { background: #ef5350; }
-        .btn-buy { background: #26a69a; }
+        .input-group label { font-size: 11px; color: #b2b5be; display: block; margin-bottom: 3px; }
+        .input-group input { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #363c4e; background: #131722; color: white; text-align: center; box-sizing: border-box; }
         
-        /* Tabel Terminal Trading */
-        .terminal-container { border-top: 1px solid #363c4e; padding-top: 8px; margin-top: 5px; }
-        .terminal-title { font-size: 12px; color: #b2b5be; margin: 0 0 6px 0; text-align: left; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-        .table-scroll { overflow-x: auto; max-height: 120px; overflow-y: auto; background: #131722; border-radius: 4px; border: 1px solid #2b2b2b; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; min-width: 450px; }
-        th { background: #1c2030; color: #787b86; padding: 6px 8px; font-weight: normal; border-bottom: 1px solid #2b2b2b; }
-        td { padding: 6px 8px; border-bottom: 1px solid #232733; vertical-align: middle; }
-        .badge-buy { color: #26a69a; font-weight: bold; }
-        .badge-sell { color: #ef5350; font-weight: bold; }
-        .btn-row-close { background: #ff9800; padding: 3px 6px; font-size: 10px; border-radius: 3px; width: auto; display: inline-block; }
-
-        #loading-screen { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 16px; color: #b2b5be; text-align: center; padding: 20px; }
-
-        /* Admin CSS */
-        #admin-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); padding: 6px 10px; border-radius: 4px; font-size: 12px; z-index: 100; border: 1px solid #363c4e; color: white; }
-        #admin-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(19, 23, 34, 0.96); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-        .admin-box { background: #1e222d; padding: 20px; border-radius: 8px; width: 100%; max-width: 360px; border: 1px solid #363c4e; text-align: center; }
-        .admin-box select { width: 100%; padding: 8px; margin-bottom: 12px; background: #131722; color: white; border: 1px solid #363c4e; border-radius: 4px; box-sizing: border-box; }
-        .btn-admin-save { background: #2962ff; margin-bottom: 8px; }
-        .btn-admin-sheet { background: #00c853; margin-bottom: 8px; }
-        .btn-admin-close { background: #787b86; }
+        .btn-container { display: flex; gap: 8px; margin-bottom: 10px; }
+        .btn-sell { background: #ef5350; flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; }
+        .btn-buy { background: #26a69a; flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; }
+        
+        /* Tabel Posisi */
+        .table-container { background: #131722; border-radius: 4px; overflow-x: auto; max-height: 100px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+        th { background: #1c2030; color: #787b86; padding: 6px; }
+        td { padding: 6px; border-bottom: 1px solid #2b2b2b; }
+        .btn-close { background: #ff9800; border: none; padding: 3px 6px; border-radius: 3px; color: white; cursor: pointer; font-size: 10px; }
     </style>
 </head>
 <body>
 
-    <button id="admin-btn" onclick="openAdmin()">⚙️ Admin</button>
-
-    <div id="admin-modal">
-        <div class="admin-box">
-            <h2>⚙️ Panel Admin</h2>
-            <button class="btn-admin-sheet" onclick="openGoogleSheet()">📝 Buka Google Sheets</button>
-            <hr style="border-color: #363c4e; margin: 15px 0;">
-            <p style="font-size: 13px; color: #b2b5be; margin-bottom: 8px;">Ganti Aset Instan:</p>
-            <select id="local-symbol">
-                <option value="FX:XAUUSD">Emas (XAUUSD)</option>
-                <option value="BINANCE:BTCUSDT">Bitcoin (BTCUSDT)</option>
-                <option value="BINANCE:ETHUSDT">Ethereum (ETHUSDT)</option>
-            </select>
-            <button class="btn-admin-save" onclick="applyLocalSymbol()">Terapkan Sementara</button>
-            <button class="btn-admin-close" onclick="closeAdmin()">Tutup Panel</button>
-        </div>
+    <div class="replay-controls">
+        <button class="btn-replay" id="btn-play" onclick="togglePlay()">▶️ Play</button>
+        <button class="btn-replay" onclick="nextCandle()">⏭️ Next Bar</button>
+        <div id="replay-date">Memuat Data Riwayat...</div>
     </div>
 
-    <div id="loading-screen">Menyambungkan ke Server... 🔄</div>
+    <div id="chart-container"></div>
 
-    <div id="tradingview_widget"></div>
-
-    <div class="panel" id="main-panel">
+    <div class="panel">
         <div class="info-header">
-            <h3 id="display-price">Harga: --</h3>
-            <h3 id="display-balance">Saldo: $0.00</h3>
+            <h3 id="display-price">Replay Price: --</h3>
+            <h3 id="display-balance">Saldo: $10000.00</h3>
         </div>
         
         <div class="order-grid">
             <div class="input-group">
-                <label>Lot Size Volume</label>
-                <input type="number" id="lot-size" value="0.10" step="0.01" min="0.01">
+                <label>Lot Size</label>
+                <input type="number" id="lot-size" value="0.10" step="0.01">
             </div>
             <div class="input-group">
-                <label>Harga Entry (0 = Pasar)</label>
-                <input type="number" id="entry-price" value="0.00" step="0.01">
+                <label>Stop Loss (Harga)</label>
+                <input type="number" id="sl-val" value="0.00" step="0.01">
             </div>
             <div class="input-group">
-                <label>Stop Loss (SL)</label>
-                <div class="inline-inputs">
-                    <select id="sl-type">
-                        <option value="PRICE">Harga</option>
-                        <option value="DOLLAR">Uang $</option>
-                    </select>
-                    <input type="number" id="sl-val" value="0.00" step="0.01">
-                </div>
-            </div>
-            <div class="input-group">
-                <label>Take Profit (TP)</label>
-                <div class="inline-inputs">
-                    <select id="tp-type">
-                        <option value="PRICE">Harga</option>
-                        <option value="DOLLAR">Uang $</option>
-                    </select>
-                    <input type="number" id="tp-val" value="0.00" step="0.01">
-                </div>
+                <label>Take Profit (Harga)</label>
+                <input type="number" id="tp-val" value="0.00" step="0.01">
             </div>
         </div>
         
         <div class="btn-container">
-            <button class="btn-sell" onclick="createOrder('SELL')">SELL</button>
-            <button class="btn-buy" onclick="createOrder('BUY')">BUY</button>
+            <button class="btn-sell" onclick="openTrade('SELL')">SELL</button>
+            <button class="btn-buy" onclick="openTrade('BUY')">BUY</button>
         </div>
 
-        <div class="terminal-container">
-            <p class="terminal-title">Posisi Terbuka Terminal</p>
-            <div class="table-scroll">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Aset/Posisi</th>
-                            <th>Lot</th>
-                            <th>Harga Entry</th>
-                            <th>Harga Live</th>
-                            <th>Profit/Loss ($)</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="terminal-body">
-                        </tbody>
-                </table>
-            </div>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Posisi</th><th>Lot</th><th>Entry</th><th>Replay PnL</th><th>Aksi</th></tr></thead>
+                <tbody id="trade-body"></tbody>
+            </table>
         </div>
     </div>
 
     <script>
-        // ========================================================
-        // KONEKSI DATABASE & SAKRAL KREATOR
-        // ========================================================
-        const LINK_CSV_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pub?output=csv";
-        const LINK_EDIT_SHEET = "https://docs.google.com/spreadsheets/d/1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/edit"; 
-        const BOT_TOKEN = "8776331759:AAFVup_qefWDme_yz7PYUvzDcXJNlJ70yLU";
-        const CHAT_ID = "-1003742641612";
-        const ADMIN_PIN = "1234";
-        // ========================================================
-
         const tg = window.Telegram.WebApp;
-        tg.expand(); 
-        tg.enableClosingConfirmation(); 
-        tg.ready();
+        tg.expand();
         
-        const userName = tg.initDataUnsafe?.user?.first_name || "Trader";
-
-        // MENGAMBIL SALDO DARI LOCALSTORAGE
-        let balance = parseFloat(localStorage.getItem('arena_balance'));
-        if (isNaN(balance)) { balance = 10000.00; localStorage.setItem('arena_balance', balance); }
-        updateBalanceUI();
-
-        let currentPrice = 0;
-        let activeSymbol = "FX:XAUUSD"; 
-        let priceInterval;
-        let coreEngineInterval;
+        // --- VARIABEL MESIN BACKTESTING ---
+        let chart, candleSeries;
+        let historicalData = [];   // Menyimpan seluruh riwayat dari Binance
+        let currentCandleIndex = 0; // Posisi candle saat ini (Mesin Waktu)
+        let isPlaying = false;
+        let playInterval;
+        let currentPrice = 0; // Harga saat di masa lalu
         
-        // ARRAY PENYIMPANAN RIWAYAT POSISI AKTIF (MULTI-TRADE)
+        let balance = 10000.00;
         let openTrades = [];
 
-        function updateBalanceUI() {
-            document.getElementById('display-balance').innerText = `Saldo: $${balance.toFixed(2)}`;
-        }
-
-        function openAdmin() {
-            let pin = prompt("Masukkan PIN Admin:");
-            if (pin === ADMIN_PIN) document.getElementById('admin-modal').style.display = 'flex';
-        }
-        function closeAdmin() { document.getElementById('admin-modal').style.display = 'none'; }
-        function openGoogleSheet() { window.open(LINK_EDIT_SHEET, '_blank'); }
-        function applyLocalSymbol() { activeSymbol = document.getElementById('local-symbol').value; closeAdmin(); startGame(); }
-
-        async function fetchAdminSettings() {
-            try {
-                const response = await fetch(LINK_CSV_GOOGLE_SHEET + "&t=" + new Date().getTime());
-                const data = await response.text();
-                const rows = data.split('\n');
-                const config = {};
-                rows.forEach(row => {
-                    const columns = row.split(',');
-                    if(columns.length >= 2) config[columns[0].trim()] = columns[1].trim();
-                });
-                if(config.Aset) activeSymbol = config.Aset;
-                startGame();
-            } catch (error) { setTimeout(startGame, 2000); }
-        }
-
-        function startGame() {
-            document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('tradingview_widget').style.display = 'block';
-            document.getElementById('main-panel').style.display = 'block';
-            document.getElementById('tradingview_widget').innerHTML = "";
-
-            new TradingView.widget({
-                "autosize": true, "symbol": activeSymbol, "interval": "1", "timezone": "Asia/Jakarta",
-                "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false,
-                "hide_top_toolbar": false, "hide_legend": false, "hide_side_toolbar": false, 
-                "allow_symbol_change": false, "save_image": false, "container_id": "tradingview_widget"
+        // 1. MEMBANGUN GRAFIK KOSONG
+        function initChart() {
+            chart = LightweightCharts.createChart(document.getElementById('chart-container'), {
+                layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
+                grid: { vertLines: { color: '#2b2b2b' }, horzLines: { color: '#2b2b2b' } },
+                timeScale: { timeVisible: true, secondsVisible: false }
             });
-
-            if (priceInterval) clearInterval(priceInterval);
-            fetchLivePrice();
-            priceInterval = setInterval(fetchLivePrice, 1000);
-
-            // JALANKAN MESIN UTAMA PENGAWAS SL/TP DAN UPDATE TABEL TERMINAL
-            if (coreEngineInterval) clearInterval(coreEngineInterval);
-            coreEngineInterval = setInterval(runCoreEngine, 1000);
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
+                wickUpColor: '#26a69a', wickDownColor: '#ef5350'
+            });
         }
 
-        function fetchLivePrice() {
-            let fetchSymbol = activeSymbol.includes('XAU') ? 'PAXGUSDT' : (activeSymbol.includes('BTC') ? 'BTCUSDT' : (activeSymbol.includes('ETH') ? 'ETHUSDT' : ''));
-            if (fetchSymbol !== "") {
-                fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${fetchSymbol}`)
-                    .then(r => r.json())
-                    .then(d => {
-                        if(d.price) {
-                            currentPrice = parseFloat(d.price);
-                            let displayName = activeSymbol.split(':')[1] || activeSymbol;
-                            document.getElementById('display-price').innerText = `${displayName}: $${currentPrice.toFixed(2)}`;
-                        }
-                    }).catch(() => {});
+        // 2. MENGAMBIL DATA RIWAYAT DARI BINANCE (Masa Lalu)
+        async function fetchHistory() {
+            // Contoh kita ambil BTCUSDT timeframe 1 Jam.
+            // Anda bisa ubah parameter startTime & endTime menggunakan sistem Timestamp (milidetik).
+            // Default di sini menarik 1000 candle terakhir untuk dicoba.
+            const url = `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=500`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                historicalData = data.map(d => ({
+                    time: d[0] / 1000, // Konversi ke detik untuk Lightweight Charts
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[2]),
+                    low: parseFloat(d[3]),
+                    close: parseFloat(d[4])
+                }));
+
+                // Masukkan 50 candle pertama ke layar sebagai awalan
+                let initialData = historicalData.slice(0, 50);
+                candleSeries.setData(initialData);
+                
+                currentCandleIndex = 50; // Set posisi mesin waktu
+                updatePriceDisplay();
+                
+            } catch (err) { alert("Gagal memuat data riwayat."); }
+        }
+
+        // 3. LOGIKA MESIN WAKTU (REPLAY PLAY/PAUSE)
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            let btn = document.getElementById('btn-play');
+            
+            if (isPlaying) {
+                btn.innerText = "⏸️ Pause";
+                btn.classList.add('pause');
+                // Putar 1 candle setiap 1 detik
+                playInterval = setInterval(nextCandle, 1000); 
+            } else {
+                btn.innerText = "▶️ Play";
+                btn.classList.remove('pause');
+                clearInterval(playInterval);
             }
         }
 
-        // --- SISTEM ORDER & LOGIKA MATEMATIKA STRUKTUR TRADING ---
-        function createOrder(dir) {
-            if (currentPrice <= 0) { alert("Tunggu sebentar, data harga live belum terkoneksi..."); return; }
+        // 4. MEMUNCULKAN CANDLE BERIKUTNYA KE LAYAR (MEMAJUKAN WAKTU)
+        function nextCandle() {
+            if (currentCandleIndex < historicalData.length) {
+                let newCandle = historicalData[currentCandleIndex];
+                candleSeries.update(newCandle); // Tambah 1 bar ke grafik
+                currentCandleIndex++;
+                updatePriceDisplay();
+                checkTrades(); // Cek SL/TP di harga masa lalu ini
+            } else {
+                togglePlay();
+                alert("Simulasi Selesai. Data riwayat habis.");
+            }
+        }
 
+        function updatePriceDisplay() {
+            let activeCandle = historicalData[currentCandleIndex - 1];
+            currentPrice = activeCandle.close; // Harga di saat itu
+            
+            // Format Waktu Tampilan
+            let dateObj = new Date(activeCandle.time * 1000);
+            document.getElementById('replay-date').innerText = dateObj.toLocaleString('id-ID');
+            document.getElementById('display-price').innerText = `BTCUSDT Replay: $${currentPrice.toFixed(2)}`;
+            
+            renderTable(); // Update tabel agar Floating PnL ikut bergerak
+        }
+
+        // --- SISTEM TRADING (Backtesting) ---
+        function openTrade(dir) {
             let lot = parseFloat(document.getElementById('lot-size').value) || 0.1;
-            let manualEntry = parseFloat(document.getElementById('entry-price').value) || 0;
-            let slVal = parseFloat(document.getElementById('sl-val').value) || 0;
-            let slType = document.getElementById('sl-type').value;
-            let tpVal = parseFloat(document.getElementById('tp-val').value) || 0;
-            let tpType = document.getElementById('tp-type').value;
+            let sl = parseFloat(document.getElementById('sl-val').value) || 0;
+            let tp = parseFloat(document.getElementById('tp-val').value) || 0;
 
-            let ePrice = manualEntry > 0 ? manualEntry : currentPrice;
-            let multiplier = activeSymbol.includes('XAU') ? 100 : 1;
-
-            // KALKULASI HARGA ABSOLUT UNTUK STOP LOSS (SL)
-            let calculatedSL = 0;
-            if (slVal > 0) {
-                if (slType === 'PRICE') {
-                    calculatedSL = slVal;
-                } else { // Jika tipe Dollar ($)
-                    let pPoints = slVal / (lot * multiplier);
-                    calculatedSL = dir === 'BUY' ? (ePrice - pPoints) : (ePrice + pPoints);
-                }
-            }
-
-            // KALKULASI HARGA ABSOLUT UNTUK TAKE PROFIT (TP)
-            let calculatedTP = 0;
-            if (tpVal > 0) {
-                if (tpType === 'PRICE') {
-                    calculatedTP = tpVal;
-                } else { // Jika tipe Dollar ($)
-                    let pPoints = tpVal / (lot * multiplier);
-                    calculatedTP = dir === 'BUY' ? (ePrice + pPoints) : (ePrice - pPoints);
-                }
-            }
-
-            // BUAT OBJEK TRANSAKSI UNTUK TABEL TERMINAL
-            let newTrade = {
-                id: Date.now() + Math.floor(Math.random() * 1000),
-                symbol: activeSymbol,
-                displayName: activeSymbol.split(':')[1] || activeSymbol,
+            let trade = {
+                id: Date.now(),
                 dir: dir,
                 lot: lot,
-                entryPrice: ePrice,
-                slPrice: calculatedSL,
-                tpPrice: calculatedTP,
-                multiplier: multiplier
+                entry: currentPrice,
+                sl: sl,
+                tp: tp
             };
-
-            openTrades.push(newTrade);
-            renderTerminal();
-
-            // KIRIM STRUK OPEN KE CHANNEL TELEGRAM
-            let msg = `🚀 *TRADE OPEN*\n👤 Trader: *${userName}*\n📈 Asset: *${newTrade.displayName}*\n🛒 Posisi: *${dir}* (${lot} Lot)\n🚪 Entry Price: *$${ePrice.toFixed(2)}*\n🛑 SL Target: ${calculatedSL > 0 ? '$'+calculatedSL.toFixed(2) : 'Tanpa SL'}\n🎯 TP Target: ${calculatedTP > 0 ? '$'+calculatedTP.toFixed(2) : 'Tanpa TP'}`;
-            sendToChannel(msg);
-
-            // RESET INPUT INPUT UNTUK MEMUDAHKAN ORDER BERIKUTNYA
-            document.getElementById('entry-price').value = "0.00";
-            document.getElementById('sl-val').value = "0.00";
-            document.getElementById('tp-val').value = "0.00";
+            openTrades.push(trade);
+            renderTable();
         }
 
-        // --- MESIN PENGURUS RIWAYAT TABEL & AUTO CLOSING ---
-        function runCoreEngine() {
-            if (openTrades.length === 0) {
-                document.getElementById('terminal-body').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#787b86; padding:15px;">Tidak ada posisi berjalan. terminal kosong.</td></tr>`;
-                return;
-            }
-
-            let tbody = document.getElementById('terminal-body');
-            let html = "";
-
-            // LOOP MENGECEK SETIAP TRANSKASI AKTIF SATU PER SATU
+        function checkTrades() {
+            // Logika Auto-Close Pengecekan SL dan TP
             for (let i = openTrades.length - 1; i >= 0; i--) {
-                let trade = openTrades[i];
+                let t = openTrades[i];
+                if (t.sl > 0) {
+                    if ((t.dir === 'BUY' && currentPrice <= t.sl) || (t.dir === 'SELL' && currentPrice >= t.sl)) { closeTrade(t.id); continue; }
+                }
+                if (t.tp > 0) {
+                    if ((t.dir === 'BUY' && currentPrice >= t.tp) || (t.dir === 'SELL' && currentPrice <= t.tp)) { closeTrade(t.id); continue; }
+                }
+            }
+        }
+
+        function closeTrade(id) {
+            let index = openTrades.findIndex(t => t.id === id);
+            if (index === -1) return;
+            
+            let t = openTrades[index];
+            let pnl = t.dir === 'BUY' ? (currentPrice - t.entry) : (t.entry - currentPrice);
+            let finalPnl = pnl * t.lot; // Misal tanpa multiplier ribet (1:1)
+            
+            balance += finalPnl;
+            document.getElementById('display-balance').innerText = `Saldo: $${balance.toFixed(2)}`;
+            
+            openTrades.splice(index, 1);
+            renderTable();
+        }
+
+        function renderTable() {
+            let html = "";
+            openTrades.forEach(t => {
+                let pnl = t.dir === 'BUY' ? (currentPrice - t.entry) : (t.entry - currentPrice);
+                let finalPnl = pnl * t.lot;
+                let color = finalPnl >= 0 ? '#26a69a' : '#ef5350';
                 
-                // Hitung Floating Untung/Rugi secara real-time
-                let pnlPoints = trade.dir === 'BUY' ? (currentPrice - trade.entryPrice) : (trade.entryPrice - currentPrice);
-                let currentPnL = pnlPoints * trade.lot * trade.multiplier;
-
-                // SISTEM DETEKSI OTOMATIS AUTO CLOSE (HIT SL / HIT TP)
-                if (trade.slPrice > 0) {
-                    if ((trade.dir === 'BUY' && currentPrice <= trade.slPrice) || (trade.dir === 'SELL' && currentPrice >= trade.slPrice)) {
-                        closeTradeEngine(trade.id, 'Hit SL');
-                        continue;
-                    }
-                }
-                if (trade.tpPrice > 0) {
-                    if ((trade.dir === 'BUY' && currentPrice >= trade.tpPrice) || (trade.dir === 'SELL' && currentPrice <= trade.tpPrice)) {
-                        closeTradeEngine(trade.id, 'Hit TP');
-                        continue;
-                    }
-                }
-
-                // RENDERING ROW BARIS TABEL VISUAL USER
-                let pnlStyle = currentPnL >= 0 ? "color:#26a69a; font-weight:bold;" : "color:#ef5350; font-weight:bold;";
-                let dirClass = trade.dir === 'BUY' ? 'badge-buy' : 'badge-sell';
-
                 html += `<tr>
-                    <td>${trade.displayName} <span class="${dirClass}">[${trade.dir}]</span></td>
-                    <td>${trade.lot.toFixed(2)}</td>
-                    <td>$${trade.entryPrice.toFixed(2)}</td>
-                    <td>$${currentPrice.toFixed(2)}</td>
-                    <td style="${pnlStyle}">${currentPnL >= 0 ? '+' : ''}$${currentPnL.toFixed(2)}</td>
-                    <td><button class="btn-row-close" onclick="closeTradeEngine(${trade.id}, 'MANUAL')">CLOSE</button></td>
+                    <td><strong style="color:${t.dir==='BUY'?'#26a69a':'#ef5350'}">${t.dir}</strong></td>
+                    <td>${t.lot}</td>
+                    <td>${t.entry.toFixed(2)}</td>
+                    <td style="color:${color}; font-weight:bold;">$${finalPnl.toFixed(2)}</td>
+                    <td><button class="btn-close" onclick="closeTrade(${t.id})">X</button></td>
                 </tr>`;
-            }
-
-            if(html !== "") tbody.innerHTML = html;
-        }
-
-        function renderTerminal() {
-            if (openTrades.length === 0) {
-                document.getElementById('terminal-body').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#787b86; padding:15px;">Tidak ada posisi berjalan. terminal kosong.</td></tr>`;
-            }
-        }
-
-        function closeTradeEngine(id, reason) {
-            let tradeIndex = openTrades.findIndex(t => t.id === id);
-            if (tradeIndex === -1) return;
-
-            let trade = openTrades[tradeIndex];
-            let pnlPoints = trade.dir === 'BUY' ? (currentPrice - trade.entryPrice) : (trade.entryPrice - currentPrice);
-            let finalPnL = pnlPoints * trade.lot * trade.multiplier;
-
-            // AKUMULASI PNL KE SALDO AKUN UTAMA
-            balance += finalPnL;
-            if (balance <= 0) {
-                alert("🚨 MARGIN CALL! Saldo Anda hancur total. Akun di-reset otomatis ke $10,000.");
-                balance = 10000.00;
-            }
-            localStorage.setItem('arena_balance', balance);
-            updateBalanceUI();
-
-            // KELUARKAN DATA DARI LIST RIWAYAT BERJALAN
-            openTrades.splice(tradeIndex, 1);
-            renderTerminal();
-
-            // FORMAT LAPORAN PERSIS SESUAI PERMINTAAN REVISI ANDA
-            let resultStatus = finalPnL >= 0 ? "WIN ✅" : "LOSS ❌";
-            let telegramMsg = `📊 *TRADE REPORT*\n\n`+
-                              `👤 Trader: *${userName}*\n`+
-                              `📈 Asset: *${trade.displayName}*\n`+
-                              `🛒 Posisi: *${trade.dir}* (${trade.lot.toFixed(2)} Lot)\n`+
-                              `🎯 Reason: *${reason === 'MANUAL' ? 'Closed Manual' : reason}*\n`+
-                              `🚪 Entry Price: *$${trade.entryPrice.toFixed(2)}*\n`+
-                              `🚪 Exit Price: *$${currentPrice.toFixed(2)}*\n`+
-                              `📉 Hasil: *${resultStatus}*\n`+
-                              `💰 PnL: *$${finalPnL.toFixed(2)}*\n`+
-                              `💼 Saldo Akhir: *$${balance.toFixed(2)}*`;
-
-            sendToChannel(telegramMsg);
-        }
-
-        function sendToChannel(msg) {
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: "Markdown" })
             });
+            document.getElementById('trade-body').innerHTML = html;
         }
 
-        fetchAdminSettings();
+        // --- MULAI SISTEM ---
+        initChart();
+        fetchHistory();
     </script>
 </body>
 </html>
