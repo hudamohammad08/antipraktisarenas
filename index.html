@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anti Praktis Arena - Pro PnL</title>
+    <title>Anti Praktis Arena - Ultimate MT5</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
@@ -18,17 +18,27 @@
         .info-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
         #display-price { font-size: 18px; color: #ff9800; font-weight: bold; margin: 0; }
         #display-balance { font-size: 18px; color: #2196F3; font-weight: bold; margin: 0; }
-        #display-pnl { font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center; display: none; }
+        
+        /* Panel Order (Lot, SL, TP) */
+        .order-inputs { display: flex; gap: 10px; margin-bottom: 10px; }
+        .input-group { flex: 1; display: flex; flex-direction: column; }
+        .input-group label { font-size: 12px; color: #b2b5be; margin-bottom: 3px; }
+        .input-group input { padding: 8px; border-radius: 5px; border: 1px solid #363c4e; background: #131722; color: white; font-weight: bold; text-align: center; }
+        
+        /* Panel Info Posisi Aktif */
+        #active-trade-info { display: none; background: #2b2b2b; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: center; }
+        #display-pnl { font-size: 20px; font-weight: bold; margin-top: 5px; }
+        .trade-detail-text { font-size: 12px; color: #b2b5be; }
         
         .btn-container { display: flex; gap: 10px; }
-        button { flex: 1; padding: 15px; border: none; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
         .btn-sell { background: #ef5350; }
         .btn-buy { background: #26a69a; }
         .btn-close { background: #ff9800; display: none; width: 100%; }
         
         #loading-screen { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 18px; color: #b2b5be; text-align: center; padding: 20px; }
 
-        /* Tombol & Panel Admin */
+        /* Admin */
         #admin-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 5px; font-size: 14px; z-index: 100; border: 1px solid #363c4e; color: white; }
         #admin-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(19, 23, 34, 0.95); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .admin-box { background: #1e222d; padding: 20px; border-radius: 10px; width: 100%; max-width: 400px; border: 1px solid #363c4e; text-align: center; }
@@ -47,11 +57,9 @@
             <h2>⚙️ Panel Admin</h2>
             <button class="btn-admin-sheet" onclick="openGoogleSheet()">📝 Buka Google Sheets</button>
             <hr style="border-color: #363c4e; margin: 20px 0;">
-            <p style="font-size: 14px; color: #b2b5be; margin-bottom: 10px;">Tes Aset Instan:</p>
             <select id="local-symbol">
                 <option value="FX:XAUUSD">Emas (XAUUSD)</option>
                 <option value="BINANCE:BTCUSDT">Bitcoin (BTCUSDT)</option>
-                <option value="BINANCE:ETHUSDT">Ethereum (ETHUSDT)</option>
             </select>
             <button class="btn-admin-save" onclick="applyLocalSymbol()">Terapkan Sementara</button>
             <button class="btn-admin-close" onclick="closeAdmin()">Tutup Panel</button>
@@ -67,13 +75,32 @@
             <h3 id="display-price">Harga: --</h3>
             <h3 id="display-balance">Saldo: $0.00</h3>
         </div>
-        <div id="display-pnl">Floating PnL: $0.00</div>
+        
+        <div class="order-inputs" id="order-inputs">
+            <div class="input-group">
+                <label>Lot Size</label>
+                <input type="number" id="lot-size" value="0.10" step="0.01" min="0.01">
+            </div>
+            <div class="input-group">
+                <label>Stop Loss</label>
+                <input type="number" id="sl-price" value="0.00" step="0.01">
+            </div>
+            <div class="input-group">
+                <label>Take Profit</label>
+                <input type="number" id="tp-price" value="0.00" step="0.01">
+            </div>
+        </div>
+
+        <div id="active-trade-info">
+            <div class="trade-detail-text" id="trade-detail-text">BUY 0.10 Lot | Entry: 0.00 | SL: 0.00 | TP: 0.00</div>
+            <div id="display-pnl">Floating PnL: $0.00</div>
+        </div>
         
         <div class="btn-container" id="trade-ui">
             <button class="btn-sell" onclick="executeTrade('SELL')">SELL</button>
             <button class="btn-buy" onclick="executeTrade('BUY')">BUY</button>
         </div>
-        <button id="close-btn" class="btn-close" onclick="closeTrade()">CLOSE POSITION</button>
+        <button id="close-btn" class="btn-close" onclick="closeTrade('MANUAL')">CLOSE POSITION</button>
     </div>
 
     <script>
@@ -92,38 +119,32 @@
         
         const userName = tg.initDataUnsafe?.user?.first_name || "Trader";
 
-        // --- SISTEM SALDO ---
         let balance = parseFloat(localStorage.getItem('arena_balance'));
-        if (isNaN(balance)) {
-            balance = 10000.00; // Modal Awal
-            localStorage.setItem('arena_balance', balance);
-        }
+        if (isNaN(balance)) { balance = 10000.00; localStorage.setItem('arena_balance', balance); }
         document.getElementById('display-balance').innerText = `Saldo: $${balance.toFixed(2)}`;
 
-        // --- VARIABEL TRADING ---
         let currentPrice = 0;
-        let entryPrice = 0;
-        let isTrading = false;
-        let tradeDir = '';
         let activeSymbol = "FX:XAUUSD"; 
         let priceInterval;
         let pnlInterval;
+        
+        // Data Transaksi
+        let isTrading = false;
+        let tradeDir = '';
+        let entryPrice = 0;
+        let lotSize = 0.1;
+        let slPrice = 0;
+        let tpPrice = 0;
+        let symbolMultiplier = 100; // 100 Emas, 1 BTC
 
-        // --- ADMIN PANEL ---
         function openAdmin() {
             let pin = prompt("Masukkan PIN Admin:");
             if (pin === ADMIN_PIN) document.getElementById('admin-modal').style.display = 'flex';
-            else if (pin !== null) alert("PIN Salah!");
         }
         function closeAdmin() { document.getElementById('admin-modal').style.display = 'none'; }
         function openGoogleSheet() { window.open(LINK_EDIT_SHEET, '_blank'); }
-        function applyLocalSymbol() {
-            activeSymbol = document.getElementById('local-symbol').value;
-            closeAdmin();
-            startGame(); 
-        }
+        function applyLocalSymbol() { activeSymbol = document.getElementById('local-symbol').value; closeAdmin(); startGame(); }
 
-        // --- SISTEM DATABASE ---
         async function fetchAdminSettings() {
             try {
                 const response = await fetch(LINK_CSV_GOOGLE_SHEET + "&t=" + new Date().getTime());
@@ -135,20 +156,10 @@
                     if(columns.length >= 2) config[columns[0].trim()] = columns[1].trim();
                 });
                 validateGame(config);
-            } catch (error) {
-                document.getElementById('loading-screen').innerHTML = "Gagal menyambung ke server. ⚠️";
-                setTimeout(startGame, 2000); 
-            }
+            } catch (error) { setTimeout(startGame, 2000); }
         }
 
         function validateGame(config) {
-            const now = new Date().getTime();
-            const start = new Date(config.WaktuMulai).getTime();
-            const end = new Date(config.WaktuSelesai).getTime();
-
-            if (now < start) return document.getElementById('loading-screen').innerHTML = `<h2>Game Belum Dimulai 🔒</h2>`;
-            if (now > end) return document.getElementById('loading-screen').innerHTML = "<h2>Game Sudah Berakhir 🏁</h2>";
-
             if(config.Aset) activeSymbol = config.Aset;
             startGame();
         }
@@ -157,106 +168,115 @@
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('tradingview_widget').style.display = 'block';
             document.getElementById('main-panel').style.display = 'block';
-
             document.getElementById('tradingview_widget').innerHTML = "";
 
             new TradingView.widget({
-                "autosize": true, 
-                "symbol": activeSymbol,
-                "interval": "1",
-                "timezone": "Asia/Jakarta",
-                "theme": "dark",
-                "style": "1",
-                "locale": "en",
-                "enable_publishing": false,
-                "hide_top_toolbar": false,
-                "hide_legend": false,
-                "hide_side_toolbar": false, 
-                "allow_symbol_change": false, 
-                "save_image": false,
-                "container_id": "tradingview_widget"
+                "autosize": true, "symbol": activeSymbol, "interval": "1", "timezone": "Asia/Jakarta",
+                "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false,
+                "hide_top_toolbar": false, "hide_legend": false, "hide_side_toolbar": false, 
+                "allow_symbol_change": false, "save_image": false, "container_id": "tradingview_widget"
             });
+
+            symbolMultiplier = activeSymbol.includes('XAU') ? 100 : 1; 
 
             if (priceInterval) clearInterval(priceInterval);
             updatePrice(activeSymbol);
-            priceInterval = setInterval(() => updatePrice(activeSymbol), 2000);
+            priceInterval = setInterval(() => updatePrice(activeSymbol), 1000);
         }
 
         function updatePrice(symbol) {
-            let fetchSymbol = "";
-            
-            // Logika Proxy: Menyambungkan XAUUSD ke harga riil emas di Binance (PAXGUSDT)
-            if (symbol.includes('XAU')) fetchSymbol = 'PAXGUSDT'; 
-            else if (symbol.includes('BTC')) fetchSymbol = 'BTCUSDT';
-            else if (symbol.includes('ETH')) fetchSymbol = 'ETHUSDT';
-
+            let fetchSymbol = symbol.includes('XAU') ? 'PAXGUSDT' : (symbol.includes('BTC') ? 'BTCUSDT' : '');
             if (fetchSymbol !== "") {
                 fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${fetchSymbol}`)
                     .then(r => r.json())
                     .then(d => {
                         if(d.price) {
                             currentPrice = parseFloat(d.price);
-                            let displayName = symbol.split(':')[1] || symbol;
-                            document.getElementById('display-price').innerText = `${displayName}: $${currentPrice.toFixed(2)}`;
+                            document.getElementById('display-price').innerText = `${symbol.split(':')[1]}: $${currentPrice.toFixed(2)}`;
                         }
                     }).catch(() => {});
             }
         }
 
-        // --- SISTEM TRADING & PNL ---
         function executeTrade(dir) {
-            if (currentPrice <= 0) {
-                alert("Tunggu sebentar, harga sedang dimuat...");
-                return;
-            }
+            if (currentPrice <= 0) { alert("Tunggu sebentar, harga sedang dimuat..."); return; }
+
+            // Ambil nilai dari input pengguna
+            lotSize = parseFloat(document.getElementById('lot-size').value) || 0.1;
+            slPrice = parseFloat(document.getElementById('sl-price').value) || 0;
+            tpPrice = parseFloat(document.getElementById('tp-price').value) || 0;
 
             isTrading = true;
             tradeDir = dir;
             entryPrice = currentPrice;
 
+            // Atur UI
+            document.getElementById('order-inputs').style.display = 'none';
             document.getElementById('trade-ui').style.display = 'none';
-            document.getElementById('close-btn').style.display = 'block';
-            document.getElementById('display-pnl').style.display = 'block';
             
-            // Perbarui Floating PnL setiap detik
+            document.getElementById('active-trade-info').style.display = 'block';
+            document.getElementById('close-btn').style.display = 'block';
+            
+            document.getElementById('trade-detail-text').innerText = 
+                `${tradeDir} ${lotSize} Lot | Entry: ${entryPrice.toFixed(2)} | SL: ${slPrice > 0 ? slPrice : 'None'} | TP: ${tpPrice > 0 ? tpPrice : 'None'}`;
+
+            // PnL & Auto Close Logic (Jalan setiap 1 detik)
             pnlInterval = setInterval(() => {
-                let pnl = tradeDir === 'BUY' ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
+                let pnlPoints = tradeDir === 'BUY' ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
+                let pnlMoney = pnlPoints * lotSize * symbolMultiplier;
+                
                 let pnlEl = document.getElementById('display-pnl');
-                pnlEl.innerText = `Floating PnL: $${pnl.toFixed(2)}`;
-                pnlEl.style.color = pnl >= 0 ? '#26a69a' : '#ef5350';
+                pnlEl.innerText = `Floating PnL: $${pnlMoney.toFixed(2)}`;
+                pnlEl.style.color = pnlMoney >= 0 ? '#26a69a' : '#ef5350';
+
+                // Cek SL & TP
+                if (slPrice > 0) {
+                    if (tradeDir === 'BUY' && currentPrice <= slPrice) closeTrade('Hit SL');
+                    if (tradeDir === 'SELL' && currentPrice >= slPrice) closeTrade('Hit SL');
+                }
+                if (tpPrice > 0) {
+                    if (tradeDir === 'BUY' && currentPrice >= tpPrice) closeTrade('Hit TP');
+                    if (tradeDir === 'SELL' && currentPrice <= tpPrice) closeTrade('Hit TP');
+                }
             }, 1000);
 
-            let msg = `🚀 *TRADE OPEN*\n👤 ${userName}\nAsset: ${activeSymbol}\nPosisi: ${tradeDir}\nHarga Masuk: $${entryPrice.toFixed(2)}`;
-            sendToChannel(msg);
+            sendToChannel(`🚀 *TRADE OPEN*\n👤 Trader: *${userName}*\nAsset: *${activeSymbol}*\nPosisi: *${tradeDir}* (${lotSize} Lot)\nEntry: *$${entryPrice.toFixed(2)}*\nSL: ${slPrice > 0 ? '$'+slPrice : 'Tidak ada'}\nTP: ${tpPrice > 0 ? '$'+tpPrice : 'Tidak ada'}`);
         }
 
-        function closeTrade() {
+        function closeTrade(reason) {
             isTrading = false;
             clearInterval(pnlInterval);
 
-            // Hitung PnL Final
-            let finalPnl = tradeDir === 'BUY' ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
+            let closePrice = currentPrice;
+            let pnlPoints = tradeDir === 'BUY' ? (closePrice - entryPrice) : (entryPrice - closePrice);
+            let finalPnl = pnlPoints * lotSize * symbolMultiplier;
             
-            // Update Saldo
             balance += finalPnl;
-            if(balance <= 0) {
-                alert("🚨 MARGIN CALL! Akun Anda di-reset ke $10,000.");
-                balance = 10000.00;
-            }
+            if(balance <= 0) { alert("🚨 MARGIN CALL! Saldo habis."); balance = 10000.00; }
             localStorage.setItem('arena_balance', balance);
             document.getElementById('display-balance').innerText = `Saldo: $${balance.toFixed(2)}`;
 
             // Kembalikan UI
+            document.getElementById('order-inputs').style.display = 'flex';
             document.getElementById('trade-ui').style.display = 'flex';
+            document.getElementById('active-trade-info').style.display = 'none';
             document.getElementById('close-btn').style.display = 'none';
-            document.getElementById('display-pnl').style.display = 'none';
             
-            // Pesan Telegram Persis Request Anda
             let resultStatus = finalPnl >= 0 ? "WIN ✅" : "LOSS ❌";
-            let telegramMsg = `📊 *TRADE REPORT*\n\n👤 Trader: *${userName}*\n📈 Asset: *${activeSymbol}*\n🛒 Posisi: *${tradeDir}*\n🎯 Hasil: *${resultStatus}*\n💰 PnL: *$${finalPnl.toFixed(2)}*\n💼 Saldo Akhir: *$${balance.toFixed(2)}*`;
+            
+            let telegramMsg = `📊 *TRADE REPORT*\n\n`+
+                              `👤 Trader: *${userName}*\n`+
+                              `📈 Asset: *${activeSymbol}*\n`+
+                              `🛒 Order: *${tradeDir}* (${lotSize} Lot)\n`+
+                              `🎯 Reason: *${reason === 'MANUAL' ? 'Closed Manual' : reason}*\n`+
+                              `🚪 Entry: *$${entryPrice.toFixed(2)}*\n`+
+                              `🚪 Exit: *$${closePrice.toFixed(2)}*\n`+
+                              `📉 Hasil: *${resultStatus}*\n`+
+                              `💰 PnL: *$${finalPnl.toFixed(2)}*\n`+
+                              `💼 Saldo Akhir: *$${balance.toFixed(2)}*`;
             
             sendToChannel(telegramMsg);
-            alert(`Posisi Ditutup!\nHasil: ${resultStatus}\nPnL: $${finalPnl.toFixed(2)}`);
+            alert(`Posisi Ditutup! (${reason})\nHasil: ${resultStatus}\nPnL: $${finalPnl.toFixed(2)}`);
         }
 
         function sendToChannel(msg) {
