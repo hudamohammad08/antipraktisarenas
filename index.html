@@ -2,32 +2,72 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anti Praktis Arena - XAU & BTC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anti Praktis Arena - Fullscreen Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
-        body { margin: 0; background-color: #1c1c1c; color: white; font-family: sans-serif; text-align: center; }
-        #tradingview_widget { height: 350px; display: none; }
-        .panel { padding: 15px; background: #2b2b2b; display: none; }
-        .btn-container { display: flex; gap: 10px; margin-top: 10px; }
-        button { flex: 1; padding: 15px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; }
-        .btn-sell { background: #d32f2f; }
-        .btn-buy { background: #1976d2; }
+        /* CSS Untuk Full Screen */
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; background-color: #131722; color: white; }
+        body { display: flex; flex-direction: column; }
+        
+        /* Area Grafik Tumbuh Penuhi Layar */
+        #tradingview_widget { flex-grow: 1; width: 100%; display: none; }
+        
+        /* Panel Bawah (Tombol Buy/Sell) */
+        .panel { padding: 15px; background: #1e222d; border-top: 1px solid #2b2b2b; flex-shrink: 0; display: none; }
+        #display-price { font-size: 18px; color: #ff9800; margin: 0 0 10px 0; font-weight: bold; text-align: center; }
+        
+        .btn-container { display: flex; gap: 10px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-sell { background: #ef5350; }
+        .btn-buy { background: #26a69a; }
         .btn-close { background: #ff9800; display: none; width: 100%; }
-        #display-price { font-size: 20px; color: #fb8c00; margin-bottom: 10px; font-weight: bold; }
-        #loading-screen { padding: 50px 20px; font-size: 18px; color: #b2b5be; }
+        
+        #loading-screen { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 18px; color: #b2b5be; text-align: center; padding: 20px; }
+
+        /* Tombol & Panel Admin */
+        #admin-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 5px; font-size: 14px; z-index: 100; flex: none; width: auto; border: 1px solid #363c4e; }
+        #admin-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(19, 23, 34, 0.95); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .admin-box { background: #1e222d; padding: 20px; border-radius: 10px; width: 100%; max-width: 400px; border: 1px solid #363c4e; text-align: center; }
+        .admin-box input, .admin-box select { width: 100%; padding: 10px; margin-bottom: 15px; background: #131722; color: white; border: 1px solid #363c4e; border-radius: 5px; box-sizing: border-box; }
+        .btn-admin-save { background: #2962ff; margin-bottom: 10px; }
+        .btn-admin-sheet { background: #00c853; margin-bottom: 10px; }
+        .btn-admin-close { background: #787b86; }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">Menyambungkan ke Server Admin... 🔄</div>
+    <button id="admin-btn" onclick="openAdmin()">⚙️ Admin</button>
+
+    <div id="admin-modal">
+        <div class="admin-box">
+            <h2>⚙️ Panel Admin</h2>
+            <p style="font-size: 14px; color: #b2b5be; margin-bottom: 20px;">
+                Untuk mengubah aturan bagi SEMUA pemain, silakan edit Database Google Sheets Anda.
+            </p>
+            <button class="btn-admin-sheet" onclick="openGoogleSheet()">📝 Buka Google Sheets</button>
+            
+            <hr style="border-color: #363c4e; margin: 20px 0;">
+            
+            <p style="font-size: 14px; color: #b2b5be; margin-bottom: 10px;">Atau tes aset instan di HP ini:</p>
+            <select id="local-symbol">
+                <option value="FX:XAUUSD">Emas (XAUUSD)</option>
+                <option value="BINANCE:BTCUSDT">Bitcoin (BTCUSDT)</option>
+                <option value="BINANCE:ETHUSDT">Ethereum (ETHUSDT)</option>
+                <option value="NASDAQ:AAPL">Apple (AAPL)</option>
+            </select>
+            <button class="btn-admin-save" onclick="applyLocalSymbol()">Terapkan Sementara</button>
+            <button class="btn-admin-close" onclick="closeAdmin()">Tutup Panel</button>
+        </div>
+    </div>
+
+    <div id="loading-screen">Menyambungkan ke Server... 🔄</div>
 
     <div id="tradingview_widget"></div>
 
     <div class="panel" id="main-panel">
         <h3 id="display-price">Menganalisis Pasar...</h3>
-        
         <div class="btn-container" id="trade-ui">
             <button class="btn-sell" onclick="executeTrade('SELL')">SELL</button>
             <button class="btn-buy" onclick="executeTrade('BUY')">BUY</button>
@@ -37,36 +77,59 @@
 
     <script>
         // ========================================================
-        // KONFIGURASI OTOMATIS TERPASANG
+        // KONFIGURASI SISTEM
         // ========================================================
         const LINK_CSV_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pub?output=csv";
+        const LINK_EDIT_SHEET = "https://docs.google.com/spreadsheets/d/1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/edit"; // Link untuk buka di browser
         const BOT_TOKEN = "8776331759:AAFVup_qefWDme_yz7PYUvzDcXJNlJ70yLU";
         const CHAT_ID = "-1003742641612";
+        const ADMIN_PIN = "1234"; // Ganti PIN ini sesuai keinginan Anda
         // ========================================================
 
         const tg = window.Telegram.WebApp;
+        tg.expand(); // Memaksa Telegram Web App untuk Full Screen
         tg.ready();
+        
         const userName = tg.initDataUnsafe?.user?.first_name || "Trader";
 
         let currentPrice = 0;
         let isTrading = false;
-        let activeSymbol = "BINANCE:BTCUSDT"; 
+        let activeSymbol = "FX:XAUUSD"; 
+        let priceInterval;
 
+        // --- SISTEM ADMIN ---
+        function openAdmin() {
+            let pin = prompt("Masukkan PIN Admin:");
+            if (pin === ADMIN_PIN) {
+                document.getElementById('admin-modal').style.display = 'flex';
+            } else if (pin !== null) {
+                alert("PIN Salah!");
+            }
+        }
+        function closeAdmin() { document.getElementById('admin-modal').style.display = 'none'; }
+        function openGoogleSheet() { window.open(LINK_EDIT_SHEET, '_blank'); }
+        
+        function applyLocalSymbol() {
+            activeSymbol = document.getElementById('local-symbol').value;
+            closeAdmin();
+            startGame(); // Render ulang grafik
+        }
+
+        // --- SISTEM DATABASE ---
         async function fetchAdminSettings() {
             try {
                 const response = await fetch(LINK_CSV_GOOGLE_SHEET + "&t=" + new Date().getTime());
                 const data = await response.text();
-                
                 const rows = data.split('\n');
                 const config = {};
                 rows.forEach(row => {
                     const columns = row.split(',');
                     if(columns.length >= 2) config[columns[0].trim()] = columns[1].trim();
                 });
-
                 validateGame(config);
             } catch (error) {
-                document.getElementById('loading-screen').innerHTML = "Gagal mengambil data dari Admin. ❌";
+                document.getElementById('loading-screen').innerHTML = "Gagal menyambung ke server. Memuat mode offline... ⚠️";
+                setTimeout(startGame, 2000); // Fallback jika gagal
             }
         }
 
@@ -76,7 +139,7 @@
             const end = new Date(config.WaktuSelesai).getTime();
 
             if (now < start) {
-                document.getElementById('loading-screen').innerHTML = `<h2>Game Belum Dimulai 🔒</h2><p>Arena akan dibuka pada:<br>${config.WaktuMulai}</p>`;
+                document.getElementById('loading-screen').innerHTML = `<h2>Game Belum Dimulai 🔒</h2><p>Arena dibuka pada:<br>${config.WaktuMulai}</p>`;
                 return;
             }
             if (now > end) {
@@ -84,26 +147,40 @@
                 return;
             }
 
-            activeSymbol = config.Aset || "BINANCE:BTCUSDT";
+            if(config.Aset) activeSymbol = config.Aset;
             startGame();
         }
 
+        // --- RENDER GRAFIK FULLSCREEN ---
         function startGame() {
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('tradingview_widget').style.display = 'block';
             document.getElementById('main-panel').style.display = 'block';
 
+            // Bersihkan chart lama jika ada (penting untuk admin saat ganti pair)
+            document.getElementById('tradingview_widget').innerHTML = "";
+
             new TradingView.widget({
-                "container_id": "tradingview_widget",
+                "autosize": true, // Ini kode rahasia agar grafik penuhi layar
                 "symbol": activeSymbol,
                 "interval": "1",
+                "timezone": "Asia/Jakarta",
                 "theme": "dark",
-                "width": "100%", "height": "350"
+                "style": "1",
+                "locale": "en",
+                "enable_publishing": false,
+                "hide_top_toolbar": false,
+                "hide_legend": false,
+                "save_image": false,
+                "container_id": "tradingview_widget"
             });
 
+            if (priceInterval) clearInterval(priceInterval);
             updatePrice(activeSymbol);
+            priceInterval = setInterval(() => updatePrice(activeSymbol), 2000);
         }
 
+        // --- SISTEM HARGA ---
         function updatePrice(symbol) {
             const cleanSymbol = symbol.includes(':') ? symbol.split(':')[1] : symbol;
             
@@ -116,18 +193,17 @@
                             document.getElementById('display-price').innerText = `${cleanSymbol}: $${currentPrice.toFixed(2)}`;
                         }
                     }).catch(() => {});
-                setTimeout(() => updatePrice(symbol), 2000);
             } else {
                 document.getElementById('display-price').innerText = `${cleanSymbol} (Lihat Harga Live di Grafik)`;
                 currentPrice = 0; 
             }
         }
 
+        // --- SISTEM TRADING ---
         function executeTrade(dir) {
             isTrading = true;
             document.getElementById('trade-ui').style.display = 'none';
             document.getElementById('close-btn').style.display = 'block';
-            
             let priceText = currentPrice > 0 ? `$${currentPrice.toFixed(2)}` : "Market Price";
             sendToChannel(`🚀 *TRADE OPEN*\n👤 ${userName}\nAsset: ${activeSymbol}\nDir: ${dir}\nPrice: ${priceText}`);
         }
@@ -136,7 +212,6 @@
             isTrading = false;
             document.getElementById('trade-ui').style.display = 'flex';
             document.getElementById('close-btn').style.display = 'none';
-            
             let priceText = currentPrice > 0 ? `$${currentPrice.toFixed(2)}` : "Market Price";
             sendToChannel(`🏁 *TRADE CLOSED*\n👤 ${userName}\nAsset: ${activeSymbol}\nPrice: ${priceText}`);
         }
@@ -148,6 +223,7 @@
             });
         }
 
+        // Mulai aplikasi
         fetchAdminSettings();
     </script>
 </body>
