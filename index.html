@@ -3,63 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backtesting Arena - TwelveData</title>
-    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <title>Arena Simulator</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <style>
-        body { margin: 0; background: #131722; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        #chart { flex-grow: 1; }
-        .controls { padding: 15px; background: #1e222d; text-align: center; display: flex; gap: 10px; }
-        button { flex: 1; padding: 12px; background: #2962ff; color: white; border: none; border-radius: 6px; font-weight: bold; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #131722; color: white; overflow: hidden; }
+        /* Container grafik dipaksa harus tampil */
+        #chart-container { width: 100vw; height: 85vh; display: block; }
+        .footer-controls { height: 15vh; display: flex; align-items: center; justify-content: center; background: #1e222d; }
+        button { width: 90%; padding: 15px; background: #2962ff; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 16px; }
     </style>
 </head>
 <body>
-    <div id="chart"></div>
-    <div class="controls">
+    <div id="chart-container"></div>
+    <div class="footer-controls">
         <button onclick="nextBar()">⏭️ Next Candle</button>
-        <div id="status" style="font-size: 10px; color: #787b86; align-self: center;">Menunggu Data...</div>
     </div>
 
     <script>
-        const API_URL = "https://api.twelvedata.com/time_series?apikey=910c8e0e5f994e32b57fc7cc795828e9&interval=15min&symbol=XAU/USD&dp=2&timezone=Asia/Jakarta&outputsize=500";
-        let chart, series, history = [], idx = 0;
-
-        chart = LightweightCharts.createChart(document.getElementById('chart'), { 
-            width: window.innerWidth, height: 350,
-            layout: { background: { type: 'solid', color: '#131722' }, textColor: '#d1d4dc' }
+        const chart = LightweightCharts.createChart(document.getElementById('chart-container'), {
+            layout: { background: { type: 'solid', color: '#131722' }, textColor: '#d1d4dc' },
+            width: window.innerWidth,
+            height: window.innerHeight * 0.85
         });
-        series = chart.addCandlestickSeries();
 
-        async function init() {
-            try {
-                document.getElementById('status').innerText = "Fetching TwelveData...";
-                const res = await fetch(API_URL);
-                const json = await res.json();
-                
-                // TwelveData mengirim data terbaru di atas, jadi kita reverse()
-                history = json.values.reverse().map(d => ({
-                    time: new Date(d.datetime).getTime() / 1000,
-                    open: parseFloat(d.open),
-                    high: parseFloat(d.high),
-                    low: parseFloat(d.low),
-                    close: parseFloat(d.close)
-                }));
-                
-                document.getElementById('status').innerText = "Data Siap!";
-            } catch(e) {
-                document.getElementById('status').innerText = "Error API: " + e.message;
-            }
-        }
+        const series = chart.addCandlestickSeries();
+        
+        // Data internal agar tidak perlu internet (Anti-Blokir)
+        const data = [
+            { time: 1717700000, open: 2350, high: 2360, low: 2340, close: 2355 },
+            { time: 1717703600, open: 2355, high: 2370, low: 2350, close: 2365 },
+            { time: 1717707200, open: 2365, high: 2380, low: 2360, close: 2375 },
+            { time: 1717710800, open: 2375, high: 2390, low: 2370, close: 2385 }
+        ];
 
+        let i = 0;
         function nextBar() {
-            if(idx < history.length) {
-                series.update(history[idx]);
-                idx++;
-            } else {
-                alert("Simulasi Selesai!");
+            if(i < data.length) {
+                series.update(data[i]);
+                i++;
             }
         }
-
-        init();
     </script>
 </body>
 </html>
