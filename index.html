@@ -3,53 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anti Praktis - Backtesting Max</title>
+    <title>Anti Praktis - Local Mode</title>
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <style>
-        body { margin: 0; background: #131722; color: white; height: 100vh; display: flex; flex-direction: column; }
+        body { margin: 0; background: #131722; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         #chart { flex-grow: 1; }
-        .controls { padding: 10px; background: #1e222d; text-align: center; }
-        button { padding: 10px 20px; background: #2962ff; color: white; border: none; border-radius: 5px; }
+        .controls { padding: 15px; background: #1e222d; text-align: center; border-top: 1px solid #333; }
+        button { padding: 12px 25px; background: #2962ff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="controls">
-        <button onclick="nextCandle()">⏭️ Next Bar (Manual)</button>
-        <div id="status" style="font-size: 12px; margin-top: 5px;">Menunggu Data CSV...</div>
-    </div>
     <div id="chart"></div>
+    <div class="controls">
+        <button onclick="nextCandle()">⏭️ Next Candle (Data Lokal)</button>
+    </div>
 
     <script>
-        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pubhtml";
-        let chart, candleSeries, data = [], index = 0;
+        // DATA SUDAH DITANAM DI SINI (Tidak butuh internet lagi)
+        const localData = [
+            { time: 1717700000, open: 69000, high: 69500, low: 68800, close: 69200 },
+            { time: 1717703600, open: 69200, high: 69800, low: 69100, close: 69500 },
+            { time: 1717707200, open: 69500, high: 70000, low: 69400, close: 69900 },
+            { time: 1717710800, open: 69900, high: 70500, low: 69800, close: 70200 },
+            { time: 1717714400, open: 70200, high: 70300, low: 69500, close: 69600 }
+        ];
 
-        // Inisialisasi Grafik
-        chart = LightweightCharts.createChart(document.getElementById('chart'), { width: window.innerWidth, height: 300 });
-        candleSeries = chart.addCandlestickSeries();
-
-        async function loadData() {
-            try {
-                const res = await fetch(CSV_URL);
-                const text = await res.text();
-                // Parsing CSV sederhana
-                data = text.split('\n').slice(1).map(row => {
-                    const [time, open, high, low, close] = row.split(',');
-                    return { time: parseInt(time), open: parseFloat(open), high: parseFloat(high), low: parseFloat(low), close: parseFloat(close) };
-                });
-                document.getElementById('status').innerText = "Data Siap! Klik Next Bar";
-            } catch(e) {
-                document.getElementById('status').innerText = "Gagal Baca CSV: " + e.message;
-            }
-        }
+        let index = 0;
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), { 
+            layout: { background: { type: 'solid', color: '#131722' }, textColor: '#d1d4dc' },
+            width: window.innerWidth, 
+            height: 350 
+        });
+        const candleSeries = chart.addCandlestickSeries();
 
         function nextCandle() {
-            if(index < data.length) {
-                candleSeries.update(data[index]);
+            if(index < localData.length) {
+                candleSeries.update(localData[index]);
                 index++;
+            } else {
+                alert("Data Selesai!");
             }
         }
-
-        loadData();
     </script>
 </body>
 </html>
