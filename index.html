@@ -26,7 +26,7 @@
     <div id="tradingview_widget"></div>
 
     <div class="panel" id="main-panel">
-        <h3 id="display-price">Memuat Harga...</h3>
+        <h3 id="display-price">Menganalisis Pasar...</h3>
         
         <div class="btn-container" id="trade-ui">
             <button class="btn-sell" onclick="executeTrade('SELL')">SELL</button>
@@ -37,9 +37,9 @@
 
     <script>
         // ========================================================
-        // KONFIGURASI WAJIB (ISI DENGAN DATA ANDA)
+        // KONFIGURASI OTOMATIS TERPASANG
         // ========================================================
-        const LINK_CSV_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pubhtml";
+        const LINK_CSV_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pub?output=csv";
         const BOT_TOKEN = "8776331759:AAFVup_qefWDme_yz7PYUvzDcXJNlJ70yLU";
         const CHAT_ID = "-1003742641612";
         // ========================================================
@@ -54,7 +54,7 @@
 
         async function fetchAdminSettings() {
             try {
-                const response = await fetch(LINK_CSV_GOOGLE_SHEET);
+                const response = await fetch(LINK_CSV_GOOGLE_SHEET + "&t=" + new Date().getTime());
                 const data = await response.text();
                 
                 const rows = data.split('\n');
@@ -84,7 +84,7 @@
                 return;
             }
 
-            activeSymbol = config.Aset;
+            activeSymbol = config.Aset || "BINANCE:BTCUSDT";
             startGame();
         }
 
@@ -107,9 +107,7 @@
         function updatePrice(symbol) {
             const cleanSymbol = symbol.includes(':') ? symbol.split(':')[1] : symbol;
             
-            // Logika Pintar: Beda perlakuan untuk BTC dan XAU
-            if (cleanSymbol.includes('BTC') || cleanSymbol.includes('USDT')) {
-                // Jika Bitcoin, tarik harga teks yang berkedip
+            if (cleanSymbol.includes('BTC') || cleanSymbol.includes('USDT') || cleanSymbol.includes('ETH')) {
                 fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${cleanSymbol}`)
                     .then(r => r.json())
                     .then(d => {
@@ -120,7 +118,6 @@
                     }).catch(() => {});
                 setTimeout(() => updatePrice(symbol), 2000);
             } else {
-                // Jika Emas (XAUUSD), arahkan pemain melihat grafik
                 document.getElementById('display-price').innerText = `${cleanSymbol} (Lihat Harga Live di Grafik)`;
                 currentPrice = 0; 
             }
