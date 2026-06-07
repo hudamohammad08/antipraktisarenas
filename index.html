@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Anti Praktis - Backtesting Max</title>
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/3.8.0/lightweight-charts.standalone.production.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; background-color: #131722; color: white; }
@@ -42,7 +42,7 @@
     <div class="replay-controls">
         <button class="btn-replay" id="btn-play" onclick="togglePlay()">▶️ Play</button>
         <button class="btn-replay" onclick="nextCandle()">⏭️ Next Bar</button>
-        <div id="replay-date">Menyambungkan Server... 🔄</div>
+        <div id="replay-date">Sistem Memulai... 🔄</div>
     </div>
 
     <div id="chart-container"></div>
@@ -97,45 +97,64 @@
         let openTrades = [];
 
         function initChart() {
-            const chartContainer = document.getElementById('chart-container');
-            chart = LightweightCharts.createChart(chartContainer, {
-                layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
-                grid: { vertLines: { color: '#2b2b2b' }, horzLines: { color: '#2b2b2b' } },
-                timeScale: { timeVisible: true, secondsVisible: false }
-            });
-            
-            candleSeries = chart.addCandlestickSeries({
-                upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
-                wickUpColor: '#26a69a', wickDownColor: '#ef5350'
-            });
+            try {
+                if (typeof LightweightCharts === 'undefined') {
+                    throw new Error("Library Grafik Terblokir Provider.");
+                }
 
-            new ResizeObserver(entries => {
-                if (entries.length === 0 || entries[0].target !== chartContainer) return;
-                const newRect = entries[0].contentRect;
-                chart.applyOptions({ height: newRect.height, width: newRect.width });
-            }).observe(chartContainer);
+                const chartContainer = document.getElementById('chart-container');
+                chart = LightweightCharts.createChart(chartContainer, {
+                    layout: { backgroundColor: '#131722', textColor: '#d1d4dc' },
+                    grid: { vertLines: { color: '#2b2b2b' }, horzLines: { color: '#2b2b2b' } },
+                    timeScale: { timeVisible: true, secondsVisible: false }
+                });
+                
+                candleSeries = chart.addCandlestickSeries({
+                    upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
+                    wickUpColor: '#26a69a', wickDownColor: '#ef5350'
+                });
+
+                // Deteksi aman untuk HP jadul/webview lambat
+                if (window.ResizeObserver) {
+                    new ResizeObserver(entries => {
+                        if (entries.length === 0 || entries[0].target !== chartContainer) return;
+                        const newRect = entries[0].contentRect;
+                        chart.applyOptions({ height: newRect.height, width: newRect.width });
+                    }).observe(chartContainer);
+                }
+                
+                return true;
+            } catch (error) {
+                document.getElementById('replay-date').innerText = "ERROR UI: " + error.message;
+                document.getElementById('replay-date').style.color = "#ef5350";
+                return false;
+            }
         }
 
         async function fetchHistory() {
-            // MENGGUNAKAN CRYPTOCOMPARE API (ANTI-BLOKIR KOMINFO)
-            // Mengambil 500 data candlestick 1 Jam (BTC to USD)
-            const url = `https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=USD&limit=500`;
+            // MENGGUNAKAN KUCOIN API (Paling Aman di Indonesia)
+            // Mengambil data BTC-USDT timeframe 1 Jam
+            const url = `https://api.kucoin.com/api/v1/market/candles?type=1hour&symbol=BTC-USDT`;
             
             try {
-                document.getElementById('replay-date').innerText = "Menarik Data API... ⏳";
+                document.getElementById('replay-date').innerText = "Menarik Data Pasar... ⏳";
+                
                 const response = await fetch(url);
-                if (!response.ok) throw new Error("Gagal mengambil data");
+                if (!response.ok) throw new Error("Koneksi API Gagal");
+                
                 const json = await response.json();
+                if (json.code !== "200000") throw new Error("Data ditolak bursa");
                 
-                const data = json.Data.Data; 
+                // KuCoin mengirim data terbalik (baru ke lama), jadi harus kita balik (reverse)
+                const data = json.data.reverse();
                 
-                // Format data untuk Lightweight Charts
+                // Format KuCoin: [0]time, [1]open, [2]close, [3]high, [4]low
                 historicalData = data.map(d => ({
-                    time: d.time, 
-                    open: d.open,
-                    high: d.high,
-                    low: d.low,
-                    close: d.close
+                    time: parseInt(d[0]), 
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[3]),
+                    low: parseFloat(d[4]),
+                    close: parseFloat(d[2])
                 }));
 
                 if (historicalData.length > 50) {
@@ -144,17 +163,17 @@
                     currentCandleIndex = 50; 
                     updatePriceDisplay();
                 } else {
-                    document.getElementById('replay-date').innerText = "Data Kosong.";
+                    document.getElementById('replay-date').innerText = "Data tidak cukup.";
                 }
                 
             } catch (err) { 
-                document.getElementById('replay-date').innerText = "Gagal Memuat Jaringan ❌";
+                document.getElementById('replay-date').innerText = "ERROR API: " + err.message;
                 document.getElementById('replay-date').style.color = "#ef5350";
             }
         }
 
         function togglePlay() {
-            if (historicalData.length === 0) return alert("Menunggu data dimuat, pastikan internet lancar.");
+            if (historicalData.length === 0) return alert("Belum ada data.");
             
             isPlaying = !isPlaying;
             let btn = document.getElementById('btn-play');
@@ -171,7 +190,7 @@
         }
 
         function nextCandle() {
-            if (historicalData.length === 0) return alert("Menunggu data dimuat...");
+            if (historicalData.length === 0) return;
 
             if (currentCandleIndex < historicalData.length) {
                 let newCandle = historicalData[currentCandleIndex];
@@ -181,7 +200,7 @@
                 checkTrades(); 
             } else {
                 if(isPlaying) togglePlay();
-                document.getElementById('replay-date').innerText = "🏁 Simulasi Selesai (Data Habis)";
+                document.getElementById('replay-date').innerText = "🏁 Simulasi Selesai";
             }
         }
 
@@ -192,13 +211,13 @@
             
             let dateObj = new Date(activeCandle.time * 1000);
             document.getElementById('replay-date').innerText = dateObj.toLocaleString('id-ID');
-            document.getElementById('display-price').innerText = `BTCUSD Replay: $${currentPrice.toFixed(2)}`;
+            document.getElementById('display-price').innerText = `BTCUSDT Replay: $${currentPrice.toFixed(2)}`;
             
             renderTable(); 
         }
 
         function openTrade(dir) {
-            if (currentPrice <= 0) return alert("Harga belum dimuat!");
+            if (currentPrice <= 0) return alert("Harga belum siap.");
             
             let lot = parseFloat(document.getElementById('lot-size').value) || 0.1;
             let sl = parseFloat(document.getElementById('sl-val').value) || 0;
@@ -264,8 +283,11 @@
             document.getElementById('trade-body').innerHTML = html;
         }
 
-        initChart();
-        fetchHistory();
+        // --- Eksekusi Utama ---
+        // Jika inisiasi grafik sukses, baru tarik data internet
+        if (initChart()) {
+            fetchHistory();
+        }
     </script>
 </body>
 </html>
