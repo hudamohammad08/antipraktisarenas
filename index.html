@@ -7,16 +7,33 @@
 <title>Backtesting Max Arena — XAU/USD</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 
 <style>
   :root {
-    --bg-0: #0b0f17; --bg-1: #111827; --bg-2: #1a2233; --line: #1f2a3d;
-    --text: #e6edf7; --muted: #8a97ad; --accent: #f5b301; 
-    --green: #22c55e; --red: #ef4444; --blue: #3b82f6; --warn: #f59e0b;
+    --bg-0: #0b0f17;
+    --bg-1: #111827;
+    --bg-2: #1a2233;
+    --line: #1f2a3d;
+    --text: #e6edf7;
+    --muted: #8a97ad;
+    --accent: #f5b301;
+    --green: #22c55e;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --warn: #f59e0b;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--text); font-family: -apple-system, sans-serif; overscroll-behavior: none; user-select: none; height: 100%; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    overscroll-behavior: none;
+    user-select: none;
+    height: 100%;
+  }
   #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
 
   /* TOP BAR */
@@ -37,8 +54,7 @@
   .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; background: rgba(11,15,23,0.92); z-index: 5; padding: 20px; }
   .overlay .card { max-width: 320px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
   .overlay h3 { margin: 0 0 8px; font-size: 15px; }
-  .overlay p { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
-  .overlay button { background: var(--accent); color: #0b0f17; border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 700; font-size: 12px; cursor: pointer; }
+  .overlay p { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
   .spinner { width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 10px; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -46,12 +62,14 @@
   .hud { position: absolute; top: 8px; left: 8px; z-index: 3; display: flex; flex-direction: column; gap: 4px; background: rgba(17,24,39,0.7); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 11px; pointer-events: none; }
   .hud .ohlc { display: flex; gap: 8px; color: var(--text); font-variant-numeric: tabular-nums; }
   .hud .ohlc span b { color: var(--muted); font-weight: 500; margin-right: 2px; }
+  
   .pnl-badge { position: absolute; top: 8px; right: 8px; z-index: 3; background: rgba(17,24,39,0.7); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 11px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   .pnl-badge .label { color: var(--muted); font-size: 10px; }
   .pnl-badge .value { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .pos { color: var(--green); } .neg { color: var(--red); }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
 
-  /* CONTROLS */
+  /* CONTROLS (15%) */
   .controls { flex: 0 0 auto; min-height: 15dvh; background: var(--bg-1); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
   .row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
   .row.scroll { overflow-x: auto; }
@@ -59,7 +77,8 @@
   .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
   .seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 600; }
   .seg button.active { background: var(--accent); color: #0b0f17; }
-  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: transform 0.05s ease; }
+
+  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.05s ease; }
   .btn:active { transform: scale(0.97); }
   .btn.primary { background: var(--accent); color: #0b0f17; border-color: var(--accent); }
   .btn.buy { background: var(--green); color: #fff; border-color: var(--green); }
@@ -68,10 +87,10 @@
   .btn.ghost { background: transparent; }
   .grow { flex: 1 1 auto; }
 
-  /* MODALS */
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; backdrop-filter: blur(2px); }
+  /* MODAL */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   .modal-bg.open { display: flex; }
-  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 360px; padding: 16px; }
+  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 380px; padding: 16px; }
   .modal h3 { margin: 0 0 12px; font-size: 14px; }
   .modal label { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 4px; }
   .modal input { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12px; outline: none; }
@@ -84,7 +103,7 @@
   .btn-close { background: #ef4444; border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
 
   /* TOAST */
-  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; pointer-events: none; transition: 0.3s; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; transition: 0.3s ease; pointer-events: none; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
   .toast.success { border-color: var(--green); color: var(--green); }
   .toast.error { border-color: var(--red); color: var(--red); }
@@ -94,20 +113,23 @@
 <div id="app">
 
   <div class="topbar">
-    <div class="brand"><div class="dot"></div><span>Backtesting Arena</span><span class="pair-tag" id="pairTag">XAU/USD</span></div>
+    <div class="brand"><div class="dot"></div><span>Backtesting Arena</span><span class="pair-tag">XAU/USD</span></div>
     <div class="status loading" id="statusBox"><div class="pulse"></div><span id="statusText">Loading…</span></div>
   </div>
 
   <div class="chart-wrap">
     <div id="chart"></div>
-    <div class="hud" id="hud" style="display:none;"><div class="ohlc" id="ohlc"></div><div style="color:var(--accent)" id="progressLabel"></div></div>
+    <div class="hud" id="hud" style="display:none;">
+      <div class="ohlc" id="ohlc"></div>
+      <div style="color:var(--accent)" id="progressLabel"></div>
+    </div>
     <div class="pnl-badge" id="pnlBadge" style="display:none;">
       <span class="label">Balance</span><span class="value" id="balanceVal">$10,000.00</span>
       <span class="label" style="margin-top:2px;">Floating P&L</span><span class="value" id="pnlVal">$0.00</span>
     </div>
 
     <div class="overlay" id="loadingOverlay">
-      <div class="card"><div class="spinner"></div><h3>Loading Data</h3><p>Mengambil data dari Google Sheets...</p></div>
+      <div class="card"><div class="spinner"></div><h3>Loading Data</h3><p>Membaca database dari Google Sheets...</p></div>
     </div>
   </div>
 
@@ -138,9 +160,9 @@
   <div class="modal">
     <h3 id="orderTitle">New Order</h3>
     <label>Lot Size</label><input type="number" id="inLot" value="0.10" step="0.01">
-    <label>Entry Price (Biarkan 0 untuk Harga Saat Ini)</label><input type="number" id="inEntry" value="0" step="0.1">
-    <label>Stop Loss (SL)</label><input type="number" id="inSl" value="0" step="0.1">
-    <label>Take Profit (TP)</label><input type="number" id="inTp" value="0" step="0.1">
+    <label>Entry Price (Biarkan 0 untuk Market Execution)</label><input type="number" id="inEntry" value="0" step="0.1">
+    <label>Stop Loss (SL) Price</label><input type="number" id="inSl" value="0" step="0.1">
+    <label>Take Profit (TP) Price</label><input type="number" id="inTp" value="0" step="0.1">
     <div class="row-btn">
       <button class="btn ghost" onclick="closeModal('orderModal')">Cancel</button>
       <button class="btn primary" id="confirmOrderBtn">Execute Order</button>
@@ -153,7 +175,7 @@
     <h3>💼 Terminal (Posisi Aktif)</h3>
     <div style="overflow-y:auto; max-height:250px;">
       <table class="term-table">
-        <thead><tr><th>Side</th><th>Lot</th><th>Entry</th><th>SL/TP</th><th>PnL</th><th></th></tr></thead>
+        <thead><tr><th>Side</th><th>Lot</th><th>Entry</th><th>SL/TP</th><th>PnL</th><th>Act</th></tr></thead>
         <tbody id="terminalBody"></tbody>
       </table>
     </div>
@@ -170,22 +192,31 @@
   'use strict';
   const $ = id => document.getElementById(id);
   
-  // STATE MANAGEMENT
-  // URL GOOGLE SHEETS ANDA (Pastikan diisi link CSV yang valid)
+  // ==========================================
+  // CONFIGURATION URL GOOGLE SHEETS
+  // ==========================================
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv";
   
   let allCandles = [], visibleIdx = 0, speedMs = 2000, playing = false, playTimer = null;
   let balance = 10000.00;
-  let openTrades = []; // ARRAY MULTI-TRANSAKSI
+  let openTrades = []; 
   let tempOrderSide = '';
 
-  // CHART SETUP
+  // CHART INITIALIZATION
   const chart = LightweightCharts.createChart($('chart'), {
-    autoSize: true, layout: { background: { type: 'solid', color: '#0b0f17' }, textColor: '#8a97ad' },
+    autoSize: true, 
+    layout: { background: { type: 'solid', color: '#0b0f17' }, textColor: '#8a97ad' },
     grid: { vertLines: { color: '#1a2233' }, horzLines: { color: '#1a2233' } },
-    crosshair: { mode: LightweightCharts.CrosshairMode.Normal }
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: '#1f2a3d' },
+    timeScale: { borderColor: '#1f2a3d', timeVisible: true }
   });
-  const candleSeries = chart.addCandlestickSeries({ upColor: '#22c55e', downColor: '#ef4444', wickUpColor: '#22c55e', wickDownColor: '#ef4444' });
+  
+  const candleSeries = chart.addCandlestickSeries({ 
+    upColor: '#22c55e', downColor: '#ef4444', 
+    borderUpColor: '#22c55e', borderDownColor: '#ef4444',
+    wickUpColor: '#22c55e', wickDownColor: '#ef4444' 
+  });
 
   chart.subscribeCrosshairMove((param) => {
     if (param.seriesData) {
@@ -194,47 +225,81 @@
     }
   });
 
-// FETCH DATA DARI GOOGLE SHEETS (DENGAN CSV PARSER ANTI-ERROR)
+  // ==========================================
+  // ROBUST NUMBER PARSER (ANTI-ERROR)
+  // Menyesuaikan format ribuan Indonesia & US
+  // ==========================================
+  function parseCleanNumber(str) {
+    if (!str) return 0;
+    // Hilangkan tanda kutip dan spasi
+    let s = str.toString().replace(/['"\s]/g, '');
+    
+    let lastComma = s.lastIndexOf(',');
+    let lastDot = s.lastIndexOf('.');
+    
+    // Jika format Indonesia (1.234.567,89)
+    if (lastComma > lastDot) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } 
+    // Jika format US (1,234,567.89)
+    else {
+      s = s.replace(/,/g, '');
+    }
+    
+    let result = parseFloat(s);
+    return isNaN(result) ? 0 : result;
+  }
+
+  // ==========================================
+  // FETCH DATA
+  // ==========================================
   async function fetchHistory() {
     try {
       const res = await fetch(SPREADSHEET_URL + "&t=" + new Date().getTime());
+      if (!res.ok) throw new Error("Gagal mengambil data");
+      
       const csv = await res.text();
       const rows = csv.trim().split('\n');
       rows.shift(); // Buang header
       
       allCandles = rows.map(r => {
-        // Regex Sakti: Memotong berdasarkan koma, TAPI mengabaikan koma di dalam tanda kutip
+        // Pemisah CSV yang cerdas (mengabaikan koma di dalam tanda kutip)
         const cols = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         
-        // Pembersih Angka: Menghapus tanda kutip dan koma ribuan (hanya menyisakan angka & titik desimal)
-        const cleanNum = (val) => parseFloat((val || '0').replace(/[^0-9.-]/g, ''));
+        let timeStr = (cols[0] || '').replace(/["']/g, ''); // Bersihkan kutip dari string waktu
         
         return { 
-          // Hapus kutip pada tanggal jika ada
-          time: Math.floor(new Date((cols[0] || '').replace(/["']/g, '').replace(' ', 'T') + 'Z').getTime() / 1000), 
-          open: cleanNum(cols[1]), 
-          high: cleanNum(cols[2]), 
-          low: cleanNum(cols[3]), 
-          close: cleanNum(cols[4]) 
+          time: Math.floor(new Date(timeStr.replace(' ', 'T') + 'Z').getTime() / 1000), 
+          open: parseCleanNumber(cols[1]), 
+          high: parseCleanNumber(cols[2]), 
+          low: parseCleanNumber(cols[3]), 
+          close: parseCleanNumber(cols[4]) 
         };
-      }).filter(c => c.time && c.close).sort((a,b) => a.time - b.time);
+      }).filter(c => c.time && c.close && c.close > 0)
+        .sort((a,b) => a.time - b.time);
+
+      if(allCandles.length === 0) throw new Error("Dataset kosong setelah disaring.");
 
       visibleIdx = Math.min(50, allCandles.length - 1);
       candleSeries.setData(allCandles.slice(0, visibleIdx));
+      chart.timeScale().fitContent();
       
       $('loadingOverlay').style.display = 'none';
       $('hud').style.display = 'flex'; $('pnlBadge').style.display = 'flex';
       $('statusBox').className = 'status ok'; $('statusText').innerText = 'Connected';
       updateHUD(allCandles[visibleIdx - 1]);
       updateProgress();
+      toast(`Sukses memuat ${allCandles.length} Bar Data`, 'success');
     } catch(e) {
       console.error(e);
-      $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Database';
-      toast("Gagal memuat atau memproses data", "error");
+      $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Format Data';
+      $('loadingOverlay').innerHTML = `<div class="card"><h3 style="color:#ef4444">⚠ Error Parser</h3><p>${e.message}</p><button onclick="window.location.reload()">Refresh</button></div>`;
     }
   }
-  
-  // REPLAY ENGINE & AUTO-CLOSE (SL/TP)
+
+  // ==========================================
+  // REPLAY ENGINE & AUTO CLOSE (SL/TP)
+  // ==========================================
   function nextCandle() {
     if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data habis!', 'success'); return; }
     
@@ -244,7 +309,7 @@
     updateHUD(c);
     updateProgress();
 
-    // Cek SL & TP untuk setiap order aktif menggunakan High & Low Candle
+    // Cek SL & TP untuk setiap order aktif (Detector)
     let closedAny = false;
     for (let i = openTrades.length - 1; i >= 0; i--) {
       let t = openTrades[i];
@@ -276,12 +341,14 @@
     else clearInterval(playTimer);
   }
 
-  // TRADING SYSTEM (MULTI ORDER)
+  // ==========================================
+  // TRADING SYSTEM
+  // ==========================================
   window.openOrderModal = function(side) {
     if(!allCandles.length) return;
     tempOrderSide = side;
     $('orderTitle').innerText = `New ${side} Order`;
-    $('inEntry').value = "0"; // Reset ke market
+    $('inEntry').value = "0"; // Reset
     $('orderModal').classList.add('open');
   }
 
@@ -291,7 +358,7 @@
     let sl = parseFloat($('inSl').value) || 0;
     let tp = parseFloat($('inTp').value) || 0;
     
-    // Jika entry 0, gunakan harga close candle terakhir
+    // Default Market Execution
     let currentPx = allCandles[visibleIdx - 1].close;
     let entry = entryInput > 0 ? entryInput : currentPx;
 
@@ -302,10 +369,10 @@
       entry: entry,
       sl: sl,
       tp: tp,
-      lineObj: null // Untuk garis di chart
+      lineObj: null 
     };
 
-    // Buat Garis Posisi di Chart
+    // Draw Price Line on Chart
     trade.lineObj = candleSeries.createPriceLine({
       price: entry,
       color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
@@ -314,7 +381,7 @@
 
     openTrades.push(trade);
     closeModal('orderModal');
-    toast(`${trade.side} Executed @ ${entry}`, 'success');
+    toast(`${trade.side} Executed @ ${entry.toFixed(2)}`, 'success');
     calculateFloatingPnL(currentPx);
     renderTerminal();
   });
@@ -323,7 +390,7 @@
     let totalPnL = 0;
     openTrades.forEach(t => {
       let diff = t.side === 'BUY' ? (currentPx - t.entry) : (t.entry - currentPx);
-      t.livePnl = diff * t.lot * 100; // Multiplier XAU
+      t.livePnl = diff * t.lot * 100; // Multiplier Emas
       totalPnL += t.livePnl;
     });
 
@@ -343,15 +410,17 @@
     let realizedPnL = diff * t.lot * 100;
     
     balance += realizedPnL;
-    candleSeries.removePriceLine(t.lineObj); // Hapus garis
-    openTrades.splice(idx, 1); // Hapus dari memori
+    candleSeries.removePriceLine(t.lineObj); 
+    openTrades.splice(idx, 1); 
     
     calculateFloatingPnL(closePx);
     renderTerminal();
     toast(`${t.side} Closed (${reason}) | PnL: ${fmtMoney(realizedPnL)}`, realizedPnL >= 0 ? 'success' : 'error');
   }
 
+  // ==========================================
   // TERMINAL UI
+  // ==========================================
   $('btnTerminal').addEventListener('click', () => {
     renderTerminal();
     $('terminalModal').classList.add('open');
@@ -381,13 +450,14 @@
 
   window.closeModal = function(id) { $(id).classList.remove('open'); }
 
-  // UTILS
+  // ==========================================
+  // UTILS & EVENT LISTENERS
+  // ==========================================
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
   function fmtMoney(n) { return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
   let tTimer; function toast(m, k) { $('toast').textContent=m; $('toast').className='toast show '+k; clearTimeout(tTimer); tTimer=setTimeout(()=>$('toast').className='toast',2000); }
 
-  // EVENT LISTENERS
   $('nextBtn').addEventListener('click', nextCandle);
   $('playBtn').addEventListener('click', togglePlay);
   document.querySelectorAll('#speedSeg button').forEach(b => {
@@ -399,7 +469,7 @@
   });
   function stopPlay() { playing = false; $('playBtn').innerHTML = '▶ Play'; clearInterval(playTimer); }
 
-  // BOOT
+  // BOOTING APP
   fetchHistory();
 })();
 </script>
