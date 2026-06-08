@@ -35,8 +35,8 @@
   .chart-wrap { flex: 1 1 85%; position: relative; min-height: 0; background: var(--bg-0); }
   #chart { position: absolute; inset: 0; }
   
-  /* LAYER CANVAS UNTUK DRAWING TOOLS */
-  #zoneCanvas { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+  /* DRAWING CANVAS OVERLAY */
+  #drawingCanvas { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 
   .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; background: rgba(11,15,23,0.92); z-index: 5; padding: 20px; }
   .overlay .card { max-width: 320px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
@@ -56,9 +56,9 @@
   .pos { color: var(--green); } .neg { color: var(--red); }
 
   /* CONTROLS */
-  .controls { flex: 0 0 auto; min-height: 15dvh; background: var(--bg-1); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .controls { flex: 0 0 auto; min-height: 15dvh; background: var(--bg-1); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
   .row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-  .row.scroll { overflow-x: auto; padding-bottom: 2px; }
+  .row.scroll { overflow-x: auto; }
   .row.scroll::-webkit-scrollbar { display: none; }
   .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
   .seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 600; white-space: nowrap; }
@@ -72,9 +72,6 @@
   .btn.terminal { background: var(--blue); color: #fff; border-color: var(--blue); }
   .btn.ghost { background: transparent; border-color: var(--line); }
   .grow { flex: 1 1 auto; }
-
-  /* KURSOR BIDIK MODUS MENGGAMBAR */
-  .drawing-mode { cursor: crosshair !important; }
 
   /* MODALS */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
@@ -92,7 +89,7 @@
   .btn-close { background: #ef4444; border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
 
   /* TOAST */
-  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; transition: 0.3s ease; pointer-events: none; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; transition: 0.3s ease; pointer-events: none; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
   .toast.success { border-color: var(--green); color: var(--green); }
   .toast.error { border-color: var(--red); color: var(--red); }
@@ -108,8 +105,8 @@
 
   <div class="chart-wrap">
     <div id="chart"></div>
-    <canvas id="zoneCanvas"></canvas>
-
+    <canvas id="drawingCanvas"></canvas>
+    
     <div class="hud" id="hud" style="display:none;">
       <div class="ohlc" id="ohlc"></div>
       <div style="color:var(--accent)" id="progressLabel"></div>
@@ -125,22 +122,6 @@
   </div>
 
   <div class="controls">
-    <div class="row scroll" style="border-bottom: 1px solid var(--line); padding-bottom: 4px;">
-      <span style="font-size: 10px; color: var(--accent); font-weight: bold; margin-right: 2px;">TOOLS:</span>
-      <div class="seg" id="toolSeg">
-        <button data-tool="cursor" class="active">🖱️ Pointer</button>
-        <button data-tool="trend">📈 Garis Tren</button>
-        <button data-tool="box">🟩 Persegi</button>
-        <button data-tool="fib">🧬 Fibonacci</button>
-        <button data-tool="pricerange">📏 Rentang</button>
-        <button data-tool="circle">⭕ Lingkaran</button>
-        <button data-tool="long">🟢 Posisi Buy</button>
-        <button data-tool="short">🔴 Posisi Sell</button>
-        <button data-tool="path">🛣️ Jalur</button>
-      </div>
-      <button class="btn ghost" style="color: var(--red); border-color: rgba(239, 68, 68, 0.2); padding: 4px 8px; font-size: 11px;" onclick="clearAllDrawings()">🗑️ Clear</button>
-    </div>
-
     <div class="row scroll">
       <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">TF</span>
       <div class="seg" id="tfSeg">
@@ -160,6 +141,16 @@
       <div class="grow"></div>
       <button class="btn ghost" onclick="openModal('dateModal')">📅 Date</button>
       <button class="btn terminal" id="btnTerminal">💼 (0)</button>
+    </div>
+
+    <div class="row scroll" style="border-top: 1px solid var(--line); padding-top: 4px;">
+      <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">ZONA</span>
+      <div class="seg" id="toolSeg">
+        <button data-tool="pointer" class="active">Cursor</button>
+        <button data-tool="line">Garis Tren</button>
+        <button data-tool="rect">Persegi</button>
+      </div>
+      <button class="btn ghost" style="padding: 4px 8px; font-size: 11px;" id="clearDrawingsBtn">🗑 Clear</button>
     </div>
 
     <div class="row">
@@ -237,11 +228,14 @@
   let openTrades = []; 
   let tempOrderSide = '';
 
-  // STATE DRAWING ENGINE VARIABLES
-  let currentTool = 'cursor'; 
-  let drawings = [];         
+  // DRAWING STATE ENGINE
+  let currentTool = 'pointer';
+  let drawings = [];
   let isDrawing = false;
-  let drawStartPoint = null; 
+  let activeDrawing = null;
+
+  const canvas = $('drawingCanvas');
+  const ctx = canvas.getContext('2d');
 
   // CHART INITIALIZATION
   const chart = LightweightCharts.createChart($('chart'), {
@@ -264,288 +258,18 @@
     wickUpColor: '#22c55e', wickDownColor: '#ef4444' 
   });
 
-  // CANVAS INITIALIZATION FOR DRAWING
-  const zoneCanvas = $('zoneCanvas');
-  const ctx = zoneCanvas.getContext('2d');
-
-  function resizeZoneCanvas() {
-    const rect = $('chart').getBoundingClientRect();
-    zoneCanvas.width = rect.width;
-    zoneCanvas.height = rect.height;
-    redrawAllDrawings();
-  }
-
-  // ==========================================
-  // HARGA & WAKTU KE KOORDINAT RENDERING ENGINE
-  // ==========================================
-  function redrawAllDrawings() {
-    ctx.clearRect(0, 0, zoneCanvas.width, zoneCanvas.height);
-    if (!allCandles.length) return;
-
-    const timeScale = chart.timeScale();
-    const pScale = chart.priceScale('right');
-    const maxW = zoneCanvas.width - pScale.width();
-
-    drawings.forEach(d => {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, maxW, zoneCanvas.height);
-      ctx.clip();
-
-      const xStart = timeScale.timeToCoordinate(d.timeStart);
-      const xEnd = d.timeEnd ? timeScale.timeToCoordinate(d.timeEnd) : maxW;
-      const yStart = candleSeries.priceToCoordinate(d.priceStart);
-      const yEnd = candleSeries.priceToCoordinate(d.priceEnd);
-
-      // 1. FIBONACCI RETRACEMENT
-      if (d.type === 'fib' && xStart !== null && yStart !== null && yEnd !== null) {
-        const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
-        const fibColors = ['#ef4444', '#f59e0b', '#10b981', '#22c55e', '#3b82f6', '#6366f1', '#a855f7'];
-        
-        fibLevels.forEach((lvl, idx) => {
-          const yLvl = yStart + (yEnd - yStart) * lvl;
-          const priceLvl = d.priceStart + (d.priceEnd - d.priceStart) * lvl;
-
-          ctx.strokeStyle = fibColors[idx];
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(xStart, yLvl);
-          ctx.lineTo(xEnd === null ? maxW : xEnd, yLvl);
-          ctx.stroke();
-
-          ctx.fillStyle = fibColors[idx];
-          ctx.font = '10px monospace';
-          ctx.fillText(`Fib ${lvl} (${priceLvl.toFixed(2)})`, xStart + 8, yLvl - 4);
-        });
-      }
-
-      // 2. PERSEGI
-      else if (d.type === 'box' && xStart !== null && xEnd !== null && yStart !== null && yEnd !== null) {
-        ctx.fillStyle = 'rgba(245, 179, 1, 0.12)';
-        ctx.strokeStyle = '#f5b301';
-        ctx.lineWidth = 1.5;
-        ctx.fillRect(xStart, yStart, xEnd - xStart, yEnd - yStart);
-        ctx.strokeRect(xStart, yStart, xEnd - xStart, yEnd - yStart);
-      }
-
-      // 3. GARIS TREN
-      else if (d.type === 'trend' && xStart !== null && xEnd !== null && yStart !== null && yEnd !== null) {
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(xStart, yStart);
-        ctx.lineTo(xEnd, yEnd);
-        ctx.stroke();
-      }
-
-      // 4. RENTANG HARGA
-      else if (d.type === 'pricerange' && xStart !== null && xEnd !== null && yStart !== null && yEnd !== null) {
-        ctx.fillStyle = 'rgba(168, 85, 247, 0.1)';
-        ctx.strokeStyle = '#a855f7';
-        ctx.setLineDash([4, 4]);
-        ctx.fillRect(xStart, yStart, xEnd - xStart, yEnd - yStart);
-        ctx.strokeRect(xStart, yStart, xEnd - xStart, yEnd - yStart);
-        ctx.setLineDash([]);
-
-        const pDiff = d.priceEnd - d.priceStart;
-        const pPct = (pDiff / d.priceStart) * 100;
-        
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px sans-serif';
-        const txt = `${pDiff >= 0 ? '▲' : '▼'} ${pDiff.toFixed(2)} (${pPct.toFixed(2)}%)`;
-        ctx.fillText(txt, xStart + (xEnd - xStart) / 2 - 45, yStart + (yEnd - yStart) / 2);
-      }
-
-      // 5. LINGKARAN
-      else if (d.type === 'circle' && xStart !== null && xEnd !== null && yStart !== null && yEnd !== null) {
-        const radius = Math.sqrt(Math.pow(xEnd - xStart, 2) + Math.pow(yEnd - yStart, 2));
-        ctx.fillStyle = 'rgba(236, 72, 153, 0.08)';
-        ctx.strokeStyle = '#ec4899';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(xStart, yStart, radius, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-      }
-
-      // 6 & 7. POSISI PEMBELIAN & PENJUALAN
-      else if ((d.type === 'long' || d.type === 'short') && xStart !== null && xEnd !== null && yStart !== null && d.priceTarget && d.priceStop) {
-        const yTarget = candleSeries.priceToCoordinate(d.priceTarget);
-        const yStop = candleSeries.priceToCoordinate(d.priceStop);
-
-        if (yTarget !== null && yStop !== null) {
-          const isLong = d.type === 'long';
-          
-          ctx.fillStyle = 'rgba(34, 197, 94, 0.22)';
-          ctx.strokeStyle = '#22c55e';
-          ctx.fillRect(xStart, isLong ? yTarget : yStart, xEnd - xStart, Math.abs(yTarget - yStart));
-          ctx.strokeRect(xStart, isLong ? yTarget : yStart, xEnd - xStart, Math.abs(yTarget - yStart));
-
-          ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
-          ctx.strokeStyle = '#ef4444';
-          ctx.fillRect(xStart, isLong ? yStart : yStop, xEnd - xStart, Math.abs(yStop - yStart));
-          ctx.strokeRect(xStart, isLong ? yStart : yStop, xEnd - xStart, Math.abs(yStop - yStart));
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '10px monospace';
-          ctx.fillText(`R:R Ratio: 2.0 (Auto)`, xStart + 6, yStart + 3);
-        }
-      }
-
-      // 8. JALUR (PATH MULTI-NODE)
-      else if (d.type === 'path' && d.points && d.points.length > 0) {
-        ctx.strokeStyle = '#14b8a6';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        
-        d.points.forEach((pt, pIdx) => {
-          const pX = timeScale.timeToCoordinate(pt.time);
-          const pY = candleSeries.priceToCoordinate(pt.price);
-          if (pX !== null && pY !== null) {
-            if (pIdx === 0) ctx.moveTo(pX, pY);
-            else ctx.lineTo(pX, pY);
-          }
-        });
-        ctx.stroke();
-
-        d.points.forEach(pt => {
-          const pX = timeScale.timeToCoordinate(pt.time);
-          const pY = candleSeries.priceToCoordinate(pt.price);
-          if (pX !== null && pY !== null) {
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath(); ctx.arc(pX, pY, 3, 0, 2*Math.PI); ctx.fill();
-          }
-        });
-      }
-
-      ctx.restore();
-    });
-  }
-
-  // EVENT DETEKSI PERUBAHAN SKALA / SCROLL CHART BROWSER
-  chart.timeScale().subscribeVisibleLogicalRangeChange(redrawAllDrawings);
-  chart.timeScale().subscribeVisibleTimeRangeChange(redrawAllDrawings);
-  window.addEventListener('resize', resizeZoneCanvas);
-
-  // MOUSE & CROSSHAIR INTERACTION LOGIC
   chart.subscribeCrosshairMove((param) => {
     if (param.seriesData) {
       const d = param.seriesData.get(candleSeries);
       if (d) updateHUD(d);
     }
-    
-    if (isDrawing && currentTool !== 'cursor' && currentTool !== 'path' && param.point) {
-      const pScale = chart.priceScale('right');
-      const maxW = zoneCanvas.width - pScale.width();
-      if (param.point.x > maxW) return;
-
-      const currentPrice = candleSeries.coordinateToPrice(param.point.y);
-      const currentTime = chart.timeScale().coordinateToTime(param.point.x);
-
-      if (currentPrice && currentTime) {
-        let activeObj = drawings[drawings.length - 1];
-        activeObj.priceEnd = currentPrice;
-        activeObj.timeEnd = currentTime;
-
-        if (currentTool === 'long') {
-          activeObj.priceTarget = currentPrice;
-          const targetPips = currentPrice - drawStartPoint.price;
-          activeObj.priceStop = drawStartPoint.price - (targetPips / 2);
-        } else if (currentTool === 'short') {
-          activeObj.priceTarget = currentPrice;
-          const targetPips = drawStartPoint.price - currentPrice;
-          activeObj.priceStop = drawStartPoint.price + (targetPips / 2);
-        }
-
-        redrawAllDrawings();
-      }
-    }
   });
 
-  // DAFTARKAN KLIK KE CANVAS SENDIRI
-  zoneCanvas.addEventListener('mousedown', (e) => {
-    if (currentTool === 'cursor') return;
-    
-    const rect = zoneCanvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const pScale = chart.priceScale('right');
-    if (mouseX > zoneCanvas.width - pScale.width()) return; 
-
-    const price = candleSeries.coordinateToPrice(mouseY);
-    const time = chart.timeScale().coordinateToTime(mouseX);
-
-    if (!price || !time) return;
-
-    if (currentTool === 'path') {
-      let activePath = drawings.find(d => d.type === 'path' && !d.isCompleted);
-      if (!activePath) {
-        drawings.push({
-          id: Date.now(),
-          type: 'path',
-          isCompleted: false,
-          points: [{ time: time, price: price }]
-        });
-        toast("Jalur dimulai! Klik area lain untuk membuat cabang.", "success");
-      } else {
-        activePath.points.push({ time: time, price: price });
-      }
-      redrawAllDrawings();
-      return;
-    }
-
-    isDrawing = true;
-    drawStartPoint = { time: time, price: price };
-
-    drawings.push({
-      id: Date.now(),
-      type: currentTool,
-      timeStart: time,
-      priceStart: price,
-      timeEnd: time,
-      priceEnd: price
-    });
+  // Sinkronisasi render canvas saat chart digeser/dizoom
+  chart.timeScale().subscribeVisibleTimeRangeChange(() => {
+    redrawCanvas();
   });
 
-  window.addEventListener('mouseup', () => {
-    if (isDrawing) {
-      isDrawing = false;
-      drawStartPoint = null;
-      toast(`Alat ${currentTool.toUpperCase()} berhasil dipasang`, "success");
-    }
-  });
-
-  // TOOL SWITCHER MANAGEMENT
-  document.querySelectorAll('#toolSeg button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#toolSeg button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentTool = btn.dataset.tool;
-
-      drawings.forEach(d => { if(d.type === 'path') d.isCompleted = true; });
-
-      if (currentTool !== 'cursor') {
-        zoneCanvas.style.pointerEvents = 'auto'; // Aktifkan interaksi canvas
-        zoneCanvas.classList.add('drawing-mode');
-        chart.applyOptions({ handleScroll: false, handleScale: false }); // Kunci navigasi chart
-      } else {
-        zoneCanvas.style.pointerEvents = 'none'; // Kembalikan interaksi ke chart utama
-        zoneCanvas.classList.remove('drawing-mode');
-        chart.applyOptions({ handleScroll: true, handleScale: true }); // Aktifkan scroll chart
-      }
-    });
-  });
-
-  window.clearAllDrawings = function() {
-    drawings = [];
-    redrawAllDrawings();
-    toast("Semua coretan gambar dibersihkan", "error");
-  };
-
-  // ==========================================
-  // ROBUST NUMBER PARSER
-  // ==========================================
   function parseCleanNumber(str) {
     if (!str) return 0;
     let s = str.toString().replace(/['"\s]/g, '');
@@ -557,9 +281,7 @@
     return isNaN(result) ? 0 : result;
   }
 
-  // ==========================================
-  // FETCH DATA UTAMA
-  // ==========================================
+  // FETCH & FILTER WEEKEND DATA MARKET
   async function fetchHistory() {
     try {
       const res = await fetch(SPREADSHEET_URL + "&t=" + new Date().getTime());
@@ -572,15 +294,28 @@
       masterCandles = rows.map(r => {
         const cols = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         let timeStr = (cols[0] || '').replace(/["']/g, ''); 
+        const unixTime = Math.floor(new Date(timeStr.replace(' ', 'T') + 'Z').getTime() / 1000);
         return { 
-          time: Math.floor(new Date(timeStr.replace(' ', 'T') + 'Z').getTime() / 1000), 
+          time: unixTime, 
           open: parseCleanNumber(cols[1]), 
           high: parseCleanNumber(cols[2]), 
           low: parseCleanNumber(cols[3]), 
           close: parseCleanNumber(cols[4]),
           rawDate: timeStr 
         };
-      }).filter(c => c.time && c.close && c.close > 0).sort((a,b) => a.time - b.time);
+      }).filter(c => {
+        if (!c.time || !c.close || c.close <= 0) return false;
+        
+        // REVISI 2: Proteksi penyaringan data hari libur (Weekend)
+        const dateObj = new Date(c.time * 1000);
+        const utcDay = dateObj.getUTCDay(); // 0 = Minggu, 6 = Sabtu
+        const utcHours = dateObj.getUTCHours();
+
+        if (utcDay === 6) return false; // Sabtu libur total
+        if (utcDay === 0 && utcHours < 22) return false; // Minggu sebelum market open (jam 22:00 UTC) tutup
+        
+        return true;
+      }).sort((a,b) => a.time - b.time);
 
       if(masterCandles.length === 0) throw new Error("Dataset kosong.");
 
@@ -592,7 +327,9 @@
       $('loadingOverlay').style.display = 'none';
       $('hud').style.display = 'flex'; $('pnlBadge').style.display = 'flex';
       $('statusBox').className = 'status ok'; $('statusText').innerText = 'Connected';
-      setTimeout(resizeZoneCanvas, 300);
+      
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
     } catch(e) {
       console.error(e);
       $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Database';
@@ -600,9 +337,6 @@
     }
   }
 
-  // ==========================================
-  // ALGORITMA RESAMPLER (PEMBUAT TIMEFRAME)
-  // ==========================================
   function aggregateCandles(data, tf) {
     if (tf === 'Base') return data;
     
@@ -632,9 +366,6 @@
     return resampled;
   }
 
-  // ==========================================
-  // FILTER ENGINE (TANGGAL & TF)
-  // ==========================================
   window.applyFilters = function() {
     let startVal = $('inStartDate').value;
     let endVal = $('inEndDate').value;
@@ -655,7 +386,9 @@
 
     stopPlay();
     openTrades.forEach(t => candleSeries.removePriceLine(t.lineObj));
-    openTrades = []; drawings = [];
+    openTrades = [];
+    drawings = [];
+    redrawCanvas();
     balance = 10000.00;
     calculateFloatingPnL(0);
     
@@ -669,15 +402,13 @@
     visibleIdx = Math.min(60, allCandles.length); 
     candleSeries.setData(allCandles.slice(0, visibleIdx));
     
-    setTimeout(() => { chart.timeScale().scrollToRealTime(); resizeZoneCanvas(); }, 150);
+    setTimeout(() => { chart.timeScale().scrollToRealTime(); }, 100);
     
     if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
     updateProgress();
+    setTimeout(redrawCanvas, 200);
   }
 
-  // ==========================================
-  // REPLAY ENGINE & AUTO CLOSE (SL/TP)
-  // ==========================================
   function nextCandle() {
     if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data habis!', 'success'); return; }
     
@@ -709,7 +440,7 @@
 
     calculateFloatingPnL(c.close);
     if(closedAny) renderTerminal();
-    redrawAllDrawings();
+    redrawCanvas();
   }
 
   function togglePlay() {
@@ -719,9 +450,7 @@
     else clearInterval(playTimer);
   }
 
-  // ==========================================
   // TRADING SYSTEM
-  // ==========================================
   window.openOrderModal = function(side) {
     if(!allCandles.length) return;
     tempOrderSide = side;
@@ -785,9 +514,124 @@
     toast(`${t.side} Closed (${reason}) | PnL: ${fmtMoney(realizedPnL)}`, realizedPnL >= 0 ? 'success' : 'error');
   }
 
-  // ==========================================
+  // REVISI 1: ENGINE LAYER UNTUK INTERAKSI GAMBAR (CANVAS DETECTOR)
+  function resizeCanvas() {
+    const rect = $('chart').getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    redrawCanvas();
+  }
+
+  function redrawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!chart || !candleSeries) return;
+
+    drawings.forEach(d => drawShape(d));
+    if (activeDrawing) drawShape(activeDrawing);
+  }
+
+  function drawShape(shape) {
+    const x1 = chart.timeScale().timeToCoordinate(shape.t1);
+    const y1 = candleSeries.priceToCoordinate(shape.p1);
+    const x2 = chart.timeScale().timeToCoordinate(shape.t2);
+    const y2 = candleSeries.priceToCoordinate(shape.p2);
+
+    if (x1 === null || y1 === null || x2 === null || y2 === null) return;
+
+    ctx.save();
+    if (shape.type === 'line') {
+      ctx.strokeStyle = '#f5b301'; 
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    } else if (shape.type === 'rect') {
+      ctx.strokeStyle = 'rgba(245, 179, 1, 0.75)';
+      ctx.fillStyle = 'rgba(245, 179, 1, 0.14)'; 
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.rect(x1, y1, x2 - x1, y2 - y1);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function getMouseOrTouchPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  function handleStart(e) {
+    if (currentTool === 'pointer') return;
+    if (!e.touches) e.preventDefault();
+    const pos = getMouseOrTouchPos(e);
+    const t = chart.timeScale().coordinateToTime(pos.x);
+    const p = candleSeries.coordinateToPrice(pos.y);
+
+    if (t && p) {
+      isDrawing = true;
+      activeDrawing = { type: currentTool, t1: t, p1: p, t2: t, p2: p };
+    }
+  }
+
+  function handleMove(e) {
+    if (!isDrawing || !activeDrawing) return;
+    const pos = getMouseOrTouchPos(e);
+    const t = chart.timeScale().coordinateToTime(pos.x);
+    const p = candleSeries.coordinateToPrice(pos.y);
+
+    if (t && p) {
+      activeDrawing.t2 = t;
+      activeDrawing.p2 = p;
+      redrawCanvas();
+    }
+  }
+
+  function handleEnd() {
+    if (isDrawing && activeDrawing) {
+      drawings.push(activeDrawing);
+      activeDrawing = null;
+      isDrawing = false;
+      redrawCanvas();
+    }
+  }
+
+  // Mouse Listener
+  canvas.addEventListener('mousedown', handleStart);
+  canvas.addEventListener('mousemove', handleMove);
+  canvas.addEventListener('mouseup', handleEnd);
+
+  // Touch Listener (Mobile & Telegram App)
+  canvas.addEventListener('touchstart', handleStart, { passive: false });
+  canvas.addEventListener('touchmove', handleMove, { passive: false });
+  canvas.addEventListener('touchend', handleEnd);
+
+  // Selector Toolbar Drawing
+  document.querySelectorAll('#toolSeg button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#toolSeg button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      currentTool = b.dataset.tool;
+
+      if (currentTool === 'pointer') {
+        canvas.style.pointerEvents = 'none'; // Berikan kontrol balik ke drag chart asli
+      } else {
+        canvas.style.pointerEvents = 'auto'; // Kunci layar untuk menggambar zona/garis
+      }
+    });
+  });
+
+  $('clearDrawingsBtn').addEventListener('click', () => {
+    drawings = [];
+    redrawCanvas();
+    toast('Seluruh gambar dibersihkan', 'success');
+  });
+
   // TERMINAL UI
-  // ==========================================
   $('btnTerminal').addEventListener('click', () => {
     renderTerminal();
     $('terminalModal').classList.add('open');
@@ -818,9 +662,6 @@
   window.openModal = function(id) { $(id).classList.add('open'); }
   window.closeModal = function(id) { $(id).classList.remove('open'); }
 
-  // ==========================================
-  // EVENT LISTENERS & UTILS
-  // ==========================================
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
   function fmtMoney(n) { return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
