@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0b0f17" />
-<title>Backtesting Max Arena — XAU/USD & Drawing Tools</title>
+<title>Backtesting Max Arena — XAU/USD</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
@@ -31,13 +31,10 @@
   .status.loading .pulse { background: var(--warn); animation: pulse 1s infinite; }
   @keyframes pulse { 50% { opacity: 0.3; } }
 
-  /* CHART AREA & DRAWING CANVAS OVERLAY */
+  /* CHART AREA */
   .chart-wrap { flex: 1 1 85%; position: relative; min-height: 0; background: var(--bg-0); }
   #chart { position: absolute; inset: 0; }
-  #drawingCanvas { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-  #drawingCanvas.active-draw { pointer-events: auto; cursor: crosshair; }
-
-  /* OVERLAYS */
+  #zoneCanvas { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
   .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; background: rgba(11,15,23,0.92); z-index: 5; padding: 20px; }
   .overlay .card { max-width: 320px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
   .overlay h3 { margin: 0 0 8px; font-size: 15px; }
@@ -63,7 +60,6 @@
   .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
   .seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 600; white-space: nowrap; }
   .seg button.active { background: var(--accent); color: #0b0f17; }
-  .seg button.draw-active { background: var(--blue); color: #fff; }
 
   .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.05s ease; white-space: nowrap; }
   .btn:active { transform: scale(0.97); }
@@ -80,7 +76,7 @@
   .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 380px; padding: 16px; }
   .modal h3 { margin: 0 0 12px; font-size: 14px; }
   .modal label { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 4px; }
-  .modal input { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12px; outline: none; }
+  .modal input, .modal select { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12px; outline: none; }
   .modal .row-btn { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
   
   /* TERMINAL TABLE */
@@ -106,8 +102,7 @@
 
   <div class="chart-wrap">
     <div id="chart"></div>
-    <canvas id="drawingCanvas"></canvas>
-    
+    <canvas id="zoneCanvas"></canvas>
     <div class="hud" id="hud" style="display:none;">
       <div class="ohlc" id="ohlc"></div>
       <div style="color:var(--accent)" id="progressLabel"></div>
@@ -141,20 +136,8 @@
       </div>
       <div class="grow"></div>
       <button class="btn ghost" onclick="openModal('dateModal')">📅 Date</button>
+      <button class="btn ghost" id="btnZones" onclick="openZoneManager()">📦 Zones (0)</button>
       <button class="btn terminal" id="btnTerminal">💼 (0)</button>
-    </div>
-
-    <div class="row scroll" style="border-top: 1px solid var(--line); padding-top: 4px;">
-      <span style="font-size: 10px; color: var(--muted); margin-right: 4px;">ZONA</span>
-      <div class="seg" id="drawSeg">
-        <button data-tool="NONE" class="active">Cursor</button>
-        <button data-tool="SUPPLY" style="color: #fca5a5;">Supply</button>
-        <button data-tool="OB_BEAR" style="color: #ef4444; font-weight: bold;">OB Bear</button>
-        <button data-tool="DEMAND" style="color: #86efac;">Demand</button>
-        <button data-tool="OB_BULL" style="color: #22c55e; font-weight: bold;">OB Bull</button>
-        <button data-tool="FVG" style="color: #fde047;">FVG</button>
-      </div>
-      <button class="btn ghost" style="padding: 4px 8px; font-size: 11px; color: var(--red);" onclick="clearAllDrawings()">🗑 Clear</button>
     </div>
 
     <div class="row">
@@ -171,8 +154,13 @@
   <div class="modal">
     <h3>📅 Pilih Tanggal Replay</h3>
     <p style="font-size: 11px; color: var(--muted); margin-top:0;">Potong data dari Database untuk mensimulasikan rentang waktu tertentu.</p>
-    <label>Mulai dari (Start Date)</label><input type="date" id="inStartDate">
-    <label>Sampai dengan (End Date - Opsional)</label><input type="date" id="inEndDate">
+    
+    <label>Mulai dari (Start Date)</label>
+    <input type="date" id="inStartDate">
+    
+    <label>Sampai dengan (End Date - Opsional)</label>
+    <input type="date" id="inEndDate">
+    
     <div class="row-btn">
       <button class="btn ghost" onclick="closeModal('dateModal')">Cancel</button>
       <button class="btn primary" onclick="applyFilters()">Terapkan Data</button>
@@ -209,6 +197,51 @@
   </div>
 </div>
 
+<div class="modal-bg" id="zoneManagerModal">
+  <div class="modal" style="max-width: 450px;">
+    <h3>📦 Management Zone (Supply & Demand)</h3>
+    <div style="margin-bottom: 10px;">
+      <button class="btn primary" style="font-size:11px; padding: 6px 10px;" onclick="openAddZoneForm()">➕ Tambah Zone Baru</button>
+    </div>
+    <div style="overflow-y:auto; max-height:220px; border: 1px solid var(--line); border-radius: 6px;">
+      <table class="term-table">
+        <thead><tr><th>Tipe</th><th>Batas Atas</th><th>Batas Bawah</th><th>Label</th><th>Aksi</th></tr></thead>
+        <tbody id="zoneManagerBody"></tbody>
+      </table>
+    </div>
+    <div class="row-btn">
+      <button class="btn ghost" onclick="closeModal('zoneManagerModal')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="zoneFormModal">
+  <div class="modal">
+    <h3 id="zoneFormTitle">Atur Detail Zone</h3>
+    <input type="hidden" id="inZoneId">
+    
+    <label>Tipe Blok</label>
+    <select id="inZoneType">
+      <option value="supply">Supply / OrderBlock Bearish</option>
+      <option value="demand">Demand / OrderBlock Bullish</option>
+    </select>
+    
+    <label>Batas Atas Harga (High Price)</label>
+    <input type="number" id="inZoneHigh" step="0.01" value="0">
+    
+    <label>Batas Bawah Harga (Low Price)</label>
+    <input type="number" id="inZoneLow" step="0.01" value="0">
+    
+    <label>Label Keterangan (Contoh: OB H4, FVG, POI)</label>
+    <input type="text" id="inZoneLabel" placeholder="Supply">
+    
+    <div class="row-btn">
+      <button class="btn ghost" onclick="closeModal('zoneFormModal'); openModal('zoneManagerModal');">Kembali</button>
+      <button class="btn primary" onclick="saveZoneData()">Simpan Kotak Zone</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -216,6 +249,9 @@
   'use strict';
   const $ = id => document.getElementById(id);
   
+  // ==========================================
+  // URL GOOGLE SHEETS
+  // ==========================================
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv";
   
   let masterCandles = []; 
@@ -227,24 +263,22 @@
   let openTrades = []; 
   let tempOrderSide = '';
 
-  // STATE DRAWING ENGINE
-  let currentTool = 'NONE'; 
-  let savedDrawings = [];  
-  let isDrawing = false;
-  let drawStartPoint = null; 
-  let drawEndPoint = null;   
+  // Data Array Kotak Supply/Demand
+  let zones = [];
 
-  const dCanvas = $('drawingCanvas');
-  const ctx = dCanvas.getContext('2d');
-
-  // INITIALIZE LIGHTWEIGHT CHART
+  // CHART INITIALIZATION
   const chart = LightweightCharts.createChart($('chart'), {
     autoSize: true, 
     layout: { background: { type: 'solid', color: '#0b0f17' }, textColor: '#8a97ad' },
     grid: { vertLines: { color: '#1a2233' }, horzLines: { color: '#1a2233' } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     rightPriceScale: { borderColor: '#1f2a3d' },
-    timeScale: { borderColor: '#1f2a3d', timeVisible: true, rightOffset: 5, barSpacing: 10 }
+    timeScale: { 
+      borderColor: '#1f2a3d', 
+      timeVisible: true,
+      rightOffset: 5, 
+      barSpacing: 10  
+    }
   });
   
   const candleSeries = chart.addCandlestickSeries({ 
@@ -253,6 +287,76 @@
     wickUpColor: '#22c55e', wickDownColor: '#ef4444' 
   });
 
+  // CANVAS INITIALIZATION FOR DRAWING BOXES
+  const zoneCanvas = $('zoneCanvas');
+  const ctx = zoneCanvas.getContext('2d');
+
+  function resizeZoneCanvas() {
+    const rect = $('chart').getBoundingClientRect();
+    zoneCanvas.width = rect.width;
+    zoneCanvas.height = rect.height;
+    drawZonesOnCanvas();
+  }
+
+  function drawZonesOnCanvas() {
+    ctx.clearRect(0, 0, zoneCanvas.width, zoneCanvas.height);
+    if (!allCandles.length || !zones.length) return;
+
+    const timeScale = chart.timeScale();
+    const pScale = chart.priceScale('right');
+    const pScaleWidth = pScale.width();
+    const maxW = zoneCanvas.width - pScaleWidth;
+
+    zones.forEach(z => {
+      const xStart = timeScale.timeToCoordinate(z.timeStart);
+      if (xStart === null) return;
+
+      let xEnd = maxW;
+      if (z.timeEnd) {
+        const xE = timeScale.timeToCoordinate(z.timeEnd);
+        if (xE !== null) xEnd = Math.min(xE, maxW);
+      }
+
+      const yHigh = candleSeries.priceToCoordinate(z.priceHigh);
+      const yLow = candleSeries.priceToCoordinate(z.priceLow);
+
+      if (yHigh === null || yLow === null) return;
+      if (xStart > maxW && xEnd > maxW) return;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, maxW, zoneCanvas.height);
+      ctx.clip();
+
+      if (z.type === 'supply') {
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.14)'; 
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+      } else {
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.14)'; 
+        ctx.strokeStyle = 'rgba(34, 197, 94, 0.6)';
+      }
+
+      ctx.lineWidth = 1;
+      const w = xEnd - xStart;
+      const h = yLow - yHigh;
+
+      ctx.fillRect(xStart, yHigh, w, h);
+      ctx.strokeRect(xStart, yHigh, w, h);
+      
+      // Label Text
+      ctx.fillStyle = z.type === 'supply' ? '#ef4444' : '#22c55e';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(z.label || (z.type === 'supply' ? 'Supply' : 'Demand'), xStart + 6, yHigh + 13);
+
+      ctx.restore();
+    });
+  }
+
+  // Bind Chart listeners to clear & redraw canvas boxes perfectly when moving/zooming
+  chart.timeScale().subscribeVisibleLogicalRangeChange(drawZonesOnCanvas);
+  chart.timeScale().subscribeVisibleTimeRangeChange(drawZonesOnCanvas);
+  window.addEventListener('resize', resizeZoneCanvas);
+
   chart.subscribeCrosshairMove((param) => {
     if (param.seriesData) {
       const d = param.seriesData.get(candleSeries);
@@ -260,143 +364,9 @@
     }
   });
 
-  function resizeOverlayCanvas() {
-    const container = $('chart');
-    dCanvas.width = container.clientWidth;
-    dCanvas.height = container.clientHeight;
-    redrawAllZones();
-  }
-  
-  window.addEventListener('resize', resizeOverlayCanvas);
-  chart.timeScale().subscribeVisibleTimeRangeChange(redrawAllZones);
-  // FIX: Menggabungkan deteksi render vertikal dan horizontal murni pada event timeScale agar terhindar dari TypeError v4
-
-  const ZONE_CONFIGS = {
-    SUPPLY:  { fill: 'rgba(239, 68, 68, 0.15)', stroke: '#ef4444', width: 1, label: 'SUPPLY ZONE' },
-    OB_BEAR: { fill: 'rgba(153, 27, 27, 0.3)',   stroke: '#ef4444', width: 2, label: '🪓 OB BEARISH' },
-    DEMAND:  { fill: 'rgba(34, 197, 94, 0.15)',  stroke: '#22c55e', width: 1, label: 'DEMAND ZONE' },
-    OB_BULL: { fill: 'rgba(21, 128, 61, 0.3)',   stroke: '#22c55e', width: 2, label: '🛡️ OB BULLISH' },
-    FVG:     { fill: 'rgba(245, 158, 11, 0.18)', stroke: '#f59e0b', width: 1, label: '⚠️ FVG ZONE' }
-  };
-
-  function redrawAllZones() {
-    ctx.clearRect(0, 0, dCanvas.width, dCanvas.height);
-    const timeScale = chart.timeScale();
-    const priceScale = chart.priceScale('right');
-
-    savedDrawings.forEach(zone => {
-      const x1 = timeScale.timeToCoordinate(zone.startTime);
-      const x2 = timeScale.timeToCoordinate(zone.endTime);
-      const y1 = priceScale.priceToCoordinate(zone.startPrice);
-      const y2 = priceScale.priceToCoordinate(zone.endPrice);
-
-      if (x1 !== null && x2 !== null && y1 !== null && y2 !== null) {
-        const conf = ZONE_CONFIGS[zone.type];
-        ctx.fillStyle = conf.fill;
-        ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
-        ctx.strokeStyle = conf.stroke;
-        ctx.lineWidth = conf.width;
-        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-
-        ctx.fillStyle = conf.stroke;
-        ctx.font = 'bold 9px sans-serif';
-        ctx.fillText(conf.label, x1 + 5, y1 + 12);
-      }
-    });
-
-    if (isDrawing && drawStartPoint && drawEndPoint && currentTool !== 'NONE') {
-      const conf = ZONE_CONFIGS[currentTool];
-      ctx.fillStyle = conf.fill;
-      ctx.fillRect(drawStartPoint.x, drawStartPoint.y, drawEndPoint.x - drawStartPoint.x, drawEndPoint.y - drawStartPoint.y);
-      ctx.strokeStyle = conf.stroke;
-      ctx.lineWidth = conf.width;
-      ctx.strokeRect(drawStartPoint.x, drawStartPoint.y, drawEndPoint.x - drawStartPoint.x, drawEndPoint.y - drawStartPoint.y);
-    }
-  }
-
-  // DESKTOP INTERACT (MOUSE)
-  dCanvas.addEventListener('mousedown', (e) => {
-    if (currentTool === 'NONE') return;
-    const rect = dCanvas.getBoundingClientRect();
-    isDrawing = true;
-    drawStartPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    drawEndPoint = { ...drawStartPoint };
-  });
-
-  dCanvas.addEventListener('mousemove', (e) => {
-    if (!isDrawing) return;
-    const rect = dCanvas.getBoundingClientRect();
-    drawEndPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    redrawAllZones();
-  });
-
-  const handleDrawEnd = () => {
-    if (!isDrawing) return;
-    isDrawing = false;
-
-    const timeScale = chart.timeScale();
-    const priceScale = chart.priceScale('right');
-
-    const t1 = timeScale.coordinateToTime(drawStartPoint.x);
-    const t2 = timeScale.coordinateToTime(drawEndPoint.x);
-    const p1 = priceScale.coordinateToPrice(drawStartPoint.y);
-    const p2 = priceScale.coordinateToPrice(drawEndPoint.y);
-
-    if (t1 && t2 && p1 && p2 && currentTool !== 'NONE') {
-      savedDrawings.push({
-        id: Date.now(), type: currentTool, startTime: t1, endTime: t2, startPrice: p1, endPrice: p2
-      });
-      toast(`Zona ${currentTool} berhasil disimpan!`, 'success');
-    }
-    drawStartPoint = null; drawEndPoint = null;
-    redrawAllZones();
-  };
-
-  dCanvas.addEventListener('mouseup', handleDrawEnd);
-
-  // MOBILE INTERACT (TELEGRAM DEVICE TOUCH LISTENERS)
-  dCanvas.addEventListener('touchstart', (e) => {
-    if (currentTool === 'NONE') return;
-    e.preventDefault();
-    const rect = dCanvas.getBoundingClientRect();
-    isDrawing = true;
-    drawStartPoint = { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    drawEndPoint = { ...drawStartPoint };
-  }, { passive: false });
-
-  dCanvas.addEventListener('touchmove', (e) => {
-    if (!isDrawing) return;
-    e.preventDefault();
-    const rect = dCanvas.getBoundingClientRect();
-    drawEndPoint = { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    redrawAllZones();
-  }, { passive: false });
-
-  dCanvas.addEventListener('touchend', handleDrawEnd);
-
-  // CONTROLLING DRAW BAR ACTION BUTTONS
-  document.querySelectorAll('#drawSeg button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#drawSeg button').forEach(b => b.className = '');
-      btn.className = 'active';
-      currentTool = btn.dataset.tool;
-
-      if (currentTool === 'NONE') {
-        dCanvas.classList.remove('active-draw');
-        btn.classList.add('active');
-      } else {
-        dCanvas.classList.add('active-draw');
-        btn.classList.add('draw-active');
-        toast(`Tarik area untuk menggambar ${currentTool}`, 'success');
-      }
-    });
-  });
-
-  window.clearAllDrawings = function() {
-    savedDrawings = []; redrawAllZones();
-    toast('Semua zona gambar dibersihkan!', 'error');
-  };
-
+  // ==========================================
+  // ROBUST NUMBER PARSER
+  // ==========================================
   function parseCleanNumber(str) {
     if (!str) return 0;
     let s = str.toString().replace(/['"\s]/g, '');
@@ -408,6 +378,9 @@
     return isNaN(result) ? 0 : result;
   }
 
+  // ==========================================
+  // FETCH DATA UTAMA
+  // ==========================================
   async function fetchHistory() {
     try {
       const res = await fetch(SPREADSHEET_URL + "&t=" + new Date().getTime());
@@ -440,7 +413,7 @@
       $('loadingOverlay').style.display = 'none';
       $('hud').style.display = 'flex'; $('pnlBadge').style.display = 'flex';
       $('statusBox').className = 'status ok'; $('statusText').innerText = 'Connected';
-      setTimeout(resizeOverlayCanvas, 300);
+      setTimeout(resizeZoneCanvas, 300);
     } catch(e) {
       console.error(e);
       $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Database';
@@ -448,12 +421,21 @@
     }
   }
 
+  // ==========================================
+  // ALGORITMA RESAMPLER
+  // ==========================================
   function aggregateCandles(data, tf) {
     if (tf === 'Base') return data;
-    let periodSec = tf === '1H' ? 3600 : tf === '4H' ? 14400 : tf === '1D' ? 86400 : 0;
-    if (periodSec === 0) return data;
+    
+    let periodSec;
+    if (tf === '1H') periodSec = 3600;
+    else if (tf === '4H') periodSec = 14400;
+    else if (tf === '1D') periodSec = 86400;
+    else return data;
 
-    let resampled = [], cur = null;
+    let resampled = [];
+    let cur = null;
+
     data.forEach(d => {
       let tWib = d.time + 25200; 
       let periodStart = Math.floor(tWib / periodSec) * periodSec - 25200;
@@ -471,21 +453,34 @@
     return resampled;
   }
 
+  // ==========================================
+  // FILTER ENGINE (TANGGAL & TF)
+  // ==========================================
   window.applyFilters = function() {
     let startVal = $('inStartDate').value;
     let endVal = $('inEndDate').value;
+
     if (!startVal) { toast("Start Date wajib diisi!", "error"); return; }
 
     let startUnix = new Date(startVal + "T00:00:00Z").getTime() / 1000;
     let endUnix = endVal ? new Date(endVal + "T23:59:59Z").getTime() / 1000 : Infinity;
+
     let dateFiltered = masterCandles.filter(c => c.time >= startUnix && c.time <= endUnix);
 
-    if (dateFiltered.length === 0) { toast("Tidak ada data pada tanggal tersebut!", "error"); return; }
+    if (dateFiltered.length === 0) {
+      toast("Tidak ada data pada tanggal tersebut!", "error");
+      return;
+    }
+
     let finalData = aggregateCandles(dateFiltered, currentTF);
 
     stopPlay();
     openTrades.forEach(t => candleSeries.removePriceLine(t.lineObj));
-    openTrades = []; balance = 10000.00; calculateFloatingPnL(0);
+    openTrades = [];
+    zones = []; 
+    updateZoneButtonCount();
+    balance = 10000.00;
+    calculateFloatingPnL(0);
     
     allCandles = finalData;
     resetAndRenderChart();
@@ -496,21 +491,34 @@
   function resetAndRenderChart() {
     visibleIdx = Math.min(60, allCandles.length); 
     candleSeries.setData(allCandles.slice(0, visibleIdx));
-    setTimeout(() => { chart.timeScale().scrollToRealTime(); redrawAllZones(); }, 100);
+    
+    setTimeout(() => { 
+      chart.timeScale().scrollToRealTime(); 
+      resizeZoneCanvas();
+    }, 150);
+    
     if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
     updateProgress();
   }
 
+  // ==========================================
+  // REPLAY ENGINE & AUTO CLOSE (SL/TP)
+  // ==========================================
   function nextCandle() {
     if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data habis!', 'success'); return; }
+    
     const c = allCandles[visibleIdx];
     candleSeries.update(c);
     visibleIdx++;
-    updateHUD(c); updateProgress(); redrawAllZones();
+    updateHUD(c);
+    updateProgress();
 
     let closedAny = false;
     for (let i = openTrades.length - 1; i >= 0; i--) {
-      let t = openTrades[i], hitPrice = 0, reason = '';
+      let t = openTrades[i];
+      let hitPrice = 0;
+      let reason = '';
+
       if (t.side === 'BUY') {
         if (t.sl > 0 && c.low <= t.sl) { hitPrice = t.sl; reason = 'SL Hit'; }
         else if (t.tp > 0 && c.high >= t.tp) { hitPrice = t.tp; reason = 'TP Hit'; }
@@ -518,10 +526,16 @@
         if (t.sl > 0 && c.high >= t.sl) { hitPrice = t.sl; reason = 'SL Hit'; }
         else if (t.tp > 0 && c.low <= t.tp) { hitPrice = t.tp; reason = 'TP Hit'; }
       }
-      if (hitPrice > 0) { executeCloseTrade(t.id, hitPrice, reason); closedAny = true; }
+
+      if (hitPrice > 0) {
+        executeCloseTrade(t.id, hitPrice, reason);
+        closedAny = true;
+      }
     }
+
     calculateFloatingPnL(c.close);
     if(closedAny) renderTerminal();
+    drawZonesOnCanvas(); 
   }
 
   function togglePlay() {
@@ -531,6 +545,9 @@
     else clearInterval(playTimer);
   }
 
+  // ==========================================
+  // TRADING SYSTEM
+  // ==========================================
   window.openOrderModal = function(side) {
     if(!allCandles.length) return;
     tempOrderSide = side;
@@ -540,26 +557,36 @@
   }
 
   $('confirmOrderBtn').addEventListener('click', () => {
-    let lot = parseFloat($('inLot').value) || 0.1, entryInput = parseFloat($('inEntry').value) || 0;
-    let sl = parseFloat($('inSl').value) || 0, tp = parseFloat($('inTp').value) || 0;
-    let currentPx = allCandles[visibleIdx - 1].close, entry = entryInput > 0 ? entryInput : currentPx;
+    let lot = parseFloat($('inLot').value) || 0.1;
+    let entryInput = parseFloat($('inEntry').value) || 0;
+    let sl = parseFloat($('inSl').value) || 0;
+    let tp = parseFloat($('inTp').value) || 0;
+    
+    let currentPx = allCandles[visibleIdx - 1].close;
+    let entry = entryInput > 0 ? entryInput : currentPx;
 
     let trade = { id: Date.now(), side: tempOrderSide, lot: lot, entry: entry, sl: sl, tp: tp, lineObj: null };
+
     trade.lineObj = candleSeries.createPriceLine({
-      price: entry, color: trade.side === 'BUY' ? '#22c55e' : '#ef4444', lineWidth: 1, lineStyle: 2, title: `${trade.side} ${lot}L`
+      price: entry, color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
+      lineWidth: 1, lineStyle: 2, title: `${trade.side} ${lot}L`
     });
 
-    openTrades.push(trade); closeModal('orderModal');
+    openTrades.push(trade);
+    closeModal('orderModal');
     toast(`${trade.side} Executed @ ${entry.toFixed(2)}`, 'success');
-    calculateFloatingPnL(currentPx); renderTerminal();
+    calculateFloatingPnL(currentPx);
+    renderTerminal();
   });
 
   function calculateFloatingPnL(currentPx) {
     let totalPnL = 0;
     openTrades.forEach(t => {
       let diff = t.side === 'BUY' ? (currentPx - t.entry) : (t.entry - currentPx);
-      t.livePnl = diff * t.lot * 100; totalPnL += t.livePnl;
+      t.livePnl = diff * t.lot * 100;
+      totalPnL += t.livePnl;
     });
+
     $('balanceVal').innerText = fmtMoney(balance);
     $('pnlVal').innerText = fmtMoney(totalPnL);
     $('pnlVal').className = 'value ' + (totalPnL >= 0 ? 'pos' : 'neg');
@@ -567,16 +594,22 @@
   }
 
   window.executeCloseTrade = function(id, forcePrice = 0, reason = 'Manual') {
-    let idx = openTrades.findIndex(t => t.id === id); if(idx === -1) return;
-    let t = openTrades[idx], closePx = forcePrice > 0 ? forcePrice : allCandles[visibleIdx - 1].close;
-    let diff = t.side === 'BUY' ? (closePx - t.entry) : (t.entry - closePx), realizedPnL = diff * t.lot * 100;
+    let idx = openTrades.findIndex(t => t.id === id);
+    if(idx === -1) return;
     
-    balance += realizedPnL; candleSeries.removePriceLine(t.lineObj); openTrades.splice(idx, 1); 
-    calculateFloatingPnL(closePx); renderTerminal();
+    let t = openTrades[idx];
+    let closePx = forcePrice > 0 ? forcePrice : allCandles[visibleIdx - 1].close;
+    let diff = t.side === 'BUY' ? (closePx - t.entry) : (t.entry - closePx);
+    let realizedPnL = diff * t.lot * 100;
+    
+    balance += realizedPnL;
+    candleSeries.removePriceLine(t.lineObj); 
+    openTrades.splice(idx, 1); 
+    
+    calculateFloatingPnL(closePx);
+    renderTerminal();
     toast(`${t.side} Closed (${reason}) | PnL: ${fmtMoney(realizedPnL)}`, realizedPnL >= 0 ? 'success' : 'error');
   }
-
-  $('btnTerminal').addEventListener('click', () => { renderTerminal(); $('terminalModal').classList.add('open'); });
 
   function renderTerminal() {
     let html = '';
@@ -584,11 +617,15 @@
       html = '<tr><td colspan="6" style="text-align:center; padding:15px; color:var(--muted)">Tidak ada posisi terbuka</td></tr>';
     } else {
       openTrades.forEach(t => {
+        let pnlColor = t.livePnl >= 0 ? 'pos' : 'neg';
+        let slStr = t.sl > 0 ? t.sl : '-';
+        let tpStr = t.tp > 0 ? t.tp : '-';
         html += `<tr>
           <td style="color:var(--${t.side==='BUY'?'green':'red'})"><b>${t.side}</b></td>
-          <td>${t.lot}</td><td>${t.entry.toFixed(2)}</td>
-          <td style="font-size:9px; color:var(--muted)">S:${t.sl>0?t.sl:'-'}<br>T:${t.tp>0?t.tp:'-'}</td>
-          <td class="${t.livePnl>=0?'pos':'neg'}"><b>$${t.livePnl.toFixed(2)}</b></td>
+          <td>${t.lot}</td>
+          <td>${t.entry.toFixed(2)}</td>
+          <td style="font-size:9px; color:var(--muted)">S:${slStr}<br>T:${tpStr}</td>
+          <td class="${pnlColor}"><b>$${t.livePnl.toFixed(2)}</b></td>
           <td><button class="btn-close" onclick="executeCloseTrade(${t.id})">X</button></td>
         </tr>`;
       });
@@ -596,8 +633,132 @@
     $('terminalBody').innerHTML = html;
   }
 
+  // ==========================================
+  // MANAGEMENT ZONE ENGINE (SUPPLY & DEMAND)
+  // ==========================================
+  window.openZoneManager = function() {
+    renderZoneManagerList();
+    openModal('zoneManagerModal');
+  }
+
+  function updateZoneButtonCount() {
+    $('btnZones').innerText = `📦 Zones (${zones.length})`;
+  }
+
+  function renderZoneManagerList() {
+    let html = '';
+    if (zones.length === 0) {
+      html = '<tr><td colspan="5" style="text-align:center; padding:15px; color:var(--muted)">Belum ada kotak supply/demand</td></tr>';
+    } else {
+      zones.forEach(z => {
+        let labelColor = z.type === 'supply' ? 'color:var(--red); font-weight:700;' : 'color:var(--green); font-weight:700;';
+        html += `<tr>
+          <td style="${labelColor}">${z.type.toUpperCase()}</td>
+          <td>${z.priceHigh.toFixed(2)}</td>
+          <td>${z.priceLow.toFixed(2)}</td>
+          <td><span style="color:var(--muted)">${z.label || '-'}</span></td>
+          <td>
+            <button class="btn" style="padding:3px 6px; font-size:10px; background:var(--bg-2);" onclick="editZoneForm(${z.id})">✏</button>
+            <button class="btn" style="padding:3px 6px; font-size:10px; background:#ef4444; color:white; border-color:#ef4444;" onclick="deleteZoneData(${z.id})">X</button>
+          </td>
+        </tr>`;
+      });
+    }
+    $('zoneManagerBody').innerHTML = html;
+  }
+
+  window.openAddZoneForm = function() {
+    closeModal('zoneManagerModal');
+    $('zoneFormTitle').innerText = "➕ Tambah Zone Baru";
+    $('inZoneId').value = "";
+    $('inZoneType').value = "supply";
+    $('inZoneLabel').value = "";
+
+    // Ambil default harga dari candle terakhir yang aktif agar memudahkan input
+    if (allCandles.length && visibleIdx > 0) {
+      let lastC = allCandles[visibleIdx - 1];
+      $('inZoneHigh').value = lastC.high.toFixed(2);
+      $('inZoneLow').value = lastC.low.toFixed(2);
+    } else {
+      $('inZoneHigh').value = "0";
+      $('inZoneLow').value = "0";
+    }
+    openModal('zoneFormModal');
+  }
+
+  window.editZoneForm = function(id) {
+    closeModal('zoneManagerModal');
+    let z = zones.find(item => item.id === id);
+    if (!z) return;
+
+    $('zoneFormTitle').innerText = "✏ Edit Nilai Zone";
+    $('inZoneId').value = z.id;
+    $('inZoneType').value = z.type;
+    $('inZoneHigh').value = z.priceHigh;
+    $('inZoneLow').value = z.priceLow;
+    $('inZoneLabel').value = z.label || "";
+
+    openModal('zoneFormModal');
+  }
+
+  window.saveZoneData = function() {
+    let id = $('inZoneId').value;
+    let type = $('inZoneType').value;
+    let high = parseFloat($('inZoneHigh').value) || 0;
+    let low = parseFloat($('inZoneLow').value) || 0;
+    let label = $('inZoneLabel').value.trim();
+
+    if (high <= low) {
+      toast("Batas Atas harus lebih besar dari Batas Bawah!", "error");
+      return;
+    }
+
+    if (id) {
+      // Mode Edit
+      let idx = zones.findIndex(item => item.id == id);
+      if (idx !== -1) {
+        zones[idx].type = type;
+        zones[idx].priceHigh = high;
+        zones[idx].priceLow = low;
+        zones[idx].label = label || (type === 'supply' ? 'Supply' : 'Demand');
+        toast("Kotak zone berhasil diperbarui", "success");
+      }
+    } else {
+      // Mode Tambah Baru
+      let curTime = allCandles[visibleIdx - 1]?.time || Math.floor(Date.now()/1000);
+      let newZone = {
+        id: Date.now(),
+        type: type,
+        priceHigh: high,
+        priceLow: low,
+        timeStart: curTime,
+        timeEnd: null, // null berarti meluas terus ke kanan secara dinamis
+        label: label || (type === 'supply' ? 'Supply' : 'Demand')
+      };
+      zones.push(newZone);
+      toast("Kotak zone baru berhasil ditambahkan", "success");
+    }
+
+    closeModal('zoneFormModal');
+    updateZoneButtonCount();
+    drawZonesOnCanvas();
+    openZoneManager(); // balik ke dashboard list manager
+  }
+
+  window.deleteZoneData = function(id) {
+    zones = zones.filter(item => item.id !== id);
+    toast("Zone dihapus", "success");
+    updateZoneButtonCount();
+    renderZoneManagerList();
+    drawZonesOnCanvas();
+  }
+
   window.openModal = function(id) { $(id).classList.add('open'); }
   window.closeModal = function(id) { $(id).classList.remove('open'); }
+
+  // ==========================================
+  // EVENT LISTENERS & UTILS
+  // ==========================================
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
   function fmtMoney(n) { return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -607,6 +768,7 @@
   $('nextBtn').addEventListener('click', nextCandle);
   $('playBtn').addEventListener('click', togglePlay);
   
+  // Setup Speed Buttons
   document.querySelectorAll('#speedSeg button').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('#speedSeg button').forEach(x => x.classList.remove('active'));
@@ -615,15 +777,19 @@
     });
   });
 
+  // Setup TF Buttons
   document.querySelectorAll('#tfSeg button').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('#tfSeg button').forEach(x => x.classList.remove('active'));
-      b.classList.add('active'); currentTF = b.dataset.tf; applyFilters(); 
+      b.classList.add('active'); 
+      currentTF = b.dataset.tf;
+      applyFilters(); 
     });
   });
 
   function stopPlay() { playing = false; $('playBtn').innerHTML = '▶ Play'; clearInterval(playTimer); }
-  
+
+  // BOOTING APP
   fetchHistory();
 })();
 </script>
