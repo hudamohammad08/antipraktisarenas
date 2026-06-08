@@ -1,93 +1,36 @@
-const $ = id => document.getElementById(id);
-const chart = LightweightCharts.createChart($('chart'), {
-    layout: { background: { color: '#0b0f17' }, textColor: '#8a97ad' },
-    grid: { vertLines: { color: '#1a2233' }, horzLines: { color: '#1a2233' } }
-});
-const candleSeries = chart.addCandlestickSeries();
-const zoneCanvas = $('zoneCanvas');
-const ctx = zoneCanvas.getContext('2d');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Memulai Inisialisasi Chart...");
 
-let drawings = [];
-let currentTool = 'cursor';
-let isDrawing = false;
-let startPoint = null;
-
-// Mengatur ukuran Canvas agar sesuai Chart
-function resizeCanvas() {
-    const rect = $('chart').getBoundingClientRect();
-    zoneCanvas.width = rect.width;
-    zoneCanvas.height = rect.height;
-    requestAnimationFrame(drawAll);
-}
-window.addEventListener('resize', resizeCanvas);
-setTimeout(resizeCanvas, 500);
-
-// Logika Render Menggunakan requestAnimationFrame (Mencegah Lag)
-function drawAll() {
-    ctx.clearRect(0, 0, zoneCanvas.width, zoneCanvas.height);
-    const timeScale = chart.timeScale();
-    
-    drawings.forEach(d => {
-        const x1 = timeScale.timeToCoordinate(d.timeStart);
-        const y1 = candleSeries.priceToCoordinate(d.priceStart);
-        const x2 = timeScale.timeToCoordinate(d.timeEnd || d.timeStart);
-        const y2 = candleSeries.priceToCoordinate(d.priceEnd || d.priceStart);
-        
-        if (x1 === null || y1 === null) return;
-
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 2;
-        
-        if (d.type === 'trend') {
-            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-        } else if (d.type === 'box') {
-            ctx.fillStyle = 'rgba(245, 179, 1, 0.2)';
-            ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
-        }
+    const chartContainer = document.getElementById('chart');
+    const chart = LightweightCharts.createChart(chartContainer, {
+        layout: { background: { color: '#0b0f17' }, textColor: '#8a97ad' },
+        grid: { vertLines: { color: '#1a2233' }, horzLines: { color: '#1a2233' } },
     });
-}
 
-// Event Mouse
-zoneCanvas.addEventListener('mousedown', e => {
-    if (currentTool === 'cursor') return;
-    isDrawing = true;
-    const rect = zoneCanvas.getBoundingClientRect();
-    startPoint = { 
-        price: candleSeries.coordinateToPrice(e.clientY - rect.top),
-        time: chart.timeScale().coordinateToTime(e.clientX - rect.left)
-    };
-    drawings.push({ type: currentTool, timeStart: startPoint.time, priceStart: startPoint.price });
-});
+    const candleSeries = chart.addCandlestickSeries();
 
-zoneCanvas.addEventListener('mousemove', e => {
-    if (!isDrawing) return;
-    const rect = zoneCanvas.getBoundingClientRect();
-    let current = drawings[drawings.length - 1];
-    current.timeEnd = chart.timeScale().coordinateToTime(e.clientX - rect.left);
-    current.priceEnd = candleSeries.coordinateToPrice(e.clientY - rect.top);
-    requestAnimationFrame(drawAll);
-});
+    // Data dummy agar chart muncul meski fetch gagal
+    const dummyData = [
+        { time: '2026-06-01', open: 1800, high: 1820, low: 1790, close: 1810 },
+        { time: '2026-06-02', open: 1810, high: 1830, low: 1800, close: 1825 }
+    ];
+    candleSeries.setData(dummyData);
 
-zoneCanvas.addEventListener('mouseup', () => { isDrawing = false; });
-
-// Switch Tool
-document.querySelectorAll('#toolSeg button').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('#toolSeg button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentTool = btn.dataset.tool;
-
-        if (currentTool === 'cursor') {
-            zoneCanvas.classList.remove('drawing-mode');
-            chart.applyOptions({ handleScroll: true, handleScale: true }); // Aktifkan Scroll
-        } else {
-            zoneCanvas.classList.add('drawing-mode');
-            chart.applyOptions({ handleScroll: false, handleScale: false }); // Kunci Scroll
+    // Fungsi Fetch yang Aman
+    async function fetchData() {
+        try {
+            console.log("Mencoba mengambil data...");
+            const response = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv");
+            
+            if (!response.ok) throw new Error("Gagal akses Sheets");
+            
+            console.log("Data berhasil dimuat!");
+            // Lanjutkan parsing data di sini jika perlu
+        } catch (error) {
+            console.error("Error pada Fetch Data:", error);
+            alert("Database Error: Cek console (F12) untuk detail.");
         }
-    });
+    }
+
+    fetchData();
 });
-
-window.clearAllDrawings = () => { drawings = []; drawAll(); };
-
-// Listener agar Gambar tetap menempel saat Chart di-scroll/zoom
-chart.timeScale().subscribeVisibleLogicalRangeChange(drawAll);
