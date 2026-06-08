@@ -6,398 +6,159 @@
 <meta name="theme-color" content="#0b0f17" />
 <title>Backtesting Max Arena — XAU/USD</title>
 
-<!-- Telegram Mini App SDK -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<!-- Lightweight Charts (TradingView) via jsDelivr -->
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 
 <style>
   :root {
-    --bg-0: #0b0f17;
-    --bg-1: #111827;
-    --bg-2: #1a2233;
-    --line: #1f2a3d;
-    --text: #e6edf7;
-    --muted: #8a97ad;
-    --accent: #f5b301;   /* gold for XAU */
-    --green: #22c55e;
-    --red:   #ef4444;
-    --blue:  #3b82f6;
-    --warn:  #f59e0b;
+    --bg-0: #0b0f17; --bg-1: #111827; --bg-2: #1a2233; --line: #1f2a3d;
+    --text: #e6edf7; --muted: #8a97ad; --accent: #f5b301; 
+    --green: #22c55e; --red: #ef4444; --blue: #3b82f6; --warn: #f59e0b;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; padding: 0;
-    background: var(--bg-0);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    overscroll-behavior: none;
-    -webkit-user-select: none;
-    user-select: none;
-    height: 100%;
-  }
-  #app {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    width: 100vw;
-    overflow: hidden;
-  }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--text); font-family: -apple-system, sans-serif; overscroll-behavior: none; user-select: none; height: 100%; }
+  #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
 
   /* TOP BAR */
-  .topbar {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background: var(--bg-1);
-    border-bottom: 1px solid var(--line);
-    gap: 8px;
-  }
-  .brand {
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 700; font-size: 14px; letter-spacing: 0.3px;
-  }
+  .topbar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--bg-1); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
   .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-  .pair-tag {
-    font-size: 11px; color: var(--accent);
-    background: rgba(245,179,1,0.08);
-    border: 1px solid rgba(245,179,1,0.25);
-    padding: 2px 6px; border-radius: 4px;
-  }
-  .status {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 11px; color: var(--muted);
-  }
-  .status .pulse {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--muted);
-  }
+  .pair-tag { font-size: 11px; color: var(--accent); background: rgba(245,179,1,0.08); border: 1px solid rgba(245,179,1,0.25); padding: 2px 6px; border-radius: 4px; }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .status .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
   .status.ok .pulse { background: var(--green); box-shadow: 0 0 6px var(--green); }
   .status.err .pulse { background: var(--red); }
   .status.loading .pulse { background: var(--warn); animation: pulse 1s infinite; }
   @keyframes pulse { 50% { opacity: 0.3; } }
 
-  /* CHART AREA — 85% */
-  .chart-wrap {
-    flex: 1 1 85%;
-    position: relative;
-    min-height: 0;
-    background: var(--bg-0);
-  }
+  /* CHART AREA */
+  .chart-wrap { flex: 1 1 85%; position: relative; min-height: 0; background: var(--bg-0); }
   #chart { position: absolute; inset: 0; }
-
-  .overlay {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    text-align: center;
-    background: rgba(11,15,23,0.92);
-    z-index: 5;
-    padding: 20px;
-  }
-  .overlay .card {
-    max-width: 320px;
-    background: var(--bg-1);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 18px;
-  }
+  .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; background: rgba(11,15,23,0.92); z-index: 5; padding: 20px; }
+  .overlay .card { max-width: 320px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
   .overlay h3 { margin: 0 0 8px; font-size: 15px; }
-  .overlay p { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
-  .overlay button {
-    background: var(--accent); color: #0b0f17;
-    border: 0; border-radius: 6px;
-    padding: 8px 14px; font-weight: 700; font-size: 12px;
-    cursor: pointer;
-  }
-  .overlay.error h3 { color: var(--red); }
-  .spinner {
-    width: 28px; height: 28px;
-    border: 3px solid rgba(255,255,255,0.1);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    margin: 0 auto 10px;
-    animation: spin 0.8s linear infinite;
-  }
+  .overlay p { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+  .overlay button { background: var(--accent); color: #0b0f17; border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 700; font-size: 12px; cursor: pointer; }
+  .spinner { width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 10px; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* HUD on chart */
-  .hud {
-    position: absolute; top: 8px; left: 8px; z-index: 3;
-    display: flex; flex-direction: column; gap: 4px;
-    background: rgba(17,24,39,0.7);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 6px 8px;
-    font-size: 11px; color: var(--muted);
-    pointer-events: none;
-  }
+  /* HUD */
+  .hud { position: absolute; top: 8px; left: 8px; z-index: 3; display: flex; flex-direction: column; gap: 4px; background: rgba(17,24,39,0.7); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 11px; pointer-events: none; }
   .hud .ohlc { display: flex; gap: 8px; color: var(--text); font-variant-numeric: tabular-nums; }
   .hud .ohlc span b { color: var(--muted); font-weight: 500; margin-right: 2px; }
-  .hud .progress { color: var(--accent); }
-
-  .pnl-badge {
-    position: absolute; top: 8px; right: 8px; z-index: 3;
-    background: rgba(17,24,39,0.7);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 11px;
-    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
-  }
+  .pnl-badge { position: absolute; top: 8px; right: 8px; z-index: 3; background: rgba(17,24,39,0.7); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 11px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   .pnl-badge .label { color: var(--muted); font-size: 10px; }
   .pnl-badge .value { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .pnl-badge .pos { color: var(--green); }
-  .pnl-badge .neg { color: var(--red); }
+  .pos { color: var(--green); } .neg { color: var(--red); }
 
-  /* CONTROL PANEL — 15% */
-  .controls {
-    flex: 0 0 auto;
-    min-height: 15dvh;
-    background: var(--bg-1);
-    border-top: 1px solid var(--line);
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
-  }
-  .row {
-    display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
-  }
-  .row.scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+  /* CONTROLS */
+  .controls { flex: 0 0 auto; min-height: 15dvh; background: var(--bg-1); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+  .row.scroll { overflow-x: auto; }
   .row.scroll::-webkit-scrollbar { display: none; }
-  .seg {
-    display: inline-flex;
-    background: var(--bg-2);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .seg button {
-    background: transparent;
-    color: var(--muted);
-    border: 0;
-    padding: 6px 9px;
-    font-size: 11px;
-    cursor: pointer;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .seg button.active {
-    background: var(--accent);
-    color: #0b0f17;
-  }
-  .seg button:not(.active):active { background: rgba(255,255,255,0.04); }
-
-  .btn {
-    background: var(--bg-2);
-    color: var(--text);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-    white-space: nowrap;
-    transition: transform 0.05s ease, background 0.15s ease;
-  }
+  .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 600; }
+  .seg button.active { background: var(--accent); color: #0b0f17; }
+  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: transform 0.05s ease; }
   .btn:active { transform: scale(0.97); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn.primary { background: var(--accent); color: #0b0f17; border-color: var(--accent); }
   .btn.buy { background: var(--green); color: #fff; border-color: var(--green); }
   .btn.sell { background: var(--red); color: #fff; border-color: var(--red); }
-  .btn.close { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn.terminal { background: var(--blue); color: #fff; border-color: var(--blue); }
   .btn.ghost { background: transparent; }
-
   .grow { flex: 1 1 auto; }
-  .label {
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-right: 2px;
-  }
 
-  /* MODAL (settings) */
-  .modal-bg {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.6);
-    display: none;
-    align-items: center; justify-content: center;
-    z-index: 50;
-    padding: 16px;
-  }
+  /* MODALS */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; backdrop-filter: blur(2px); }
   .modal-bg.open { display: flex; }
-  .modal {
-    background: var(--bg-1);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    width: 100%;
-    max-width: 360px;
-    padding: 16px;
-  }
+  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 360px; padding: 16px; }
   .modal h3 { margin: 0 0 12px; font-size: 14px; }
   .modal label { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 4px; }
-  .modal input, .modal select {
-    width: 100%;
-    background: var(--bg-2);
-    color: var(--text);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 8px 10px;
-    font-size: 12px;
-    outline: none;
-    -webkit-appearance: none;
-  }
+  .modal input { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12px; outline: none; }
   .modal .row-btn { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-  .hint { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-  .hint a { color: var(--accent); text-decoration: none; }
+  
+  /* TERMINAL TABLE */
+  .term-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+  .term-table th { padding: 6px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .term-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  .btn-close { background: #ef4444; border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
 
-  /* Toast */
-  .toast {
-    position: fixed; bottom: 80px; left: 50%;
-    transform: translateX(-50%);
-    background: var(--bg-2);
-    border: 1px solid var(--line);
-    padding: 8px 14px; border-radius: 999px;
-    font-size: 12px;
-    z-index: 60;
-    opacity: 0;
-    transition: opacity 0.25s ease, transform 0.25s ease;
-    pointer-events: none;
-  }
+  /* TOAST */
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; pointer-events: none; transition: 0.3s; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
   .toast.success { border-color: var(--green); color: var(--green); }
   .toast.error { border-color: var(--red); color: var(--red); }
-
-  /* Hide HUD on very small screens */
-  @media (max-width: 360px) {
-    .hud .ohlc { display: none; }
-  }
 </style>
 </head>
 <body>
-<div id="app" data-testid="app-root">
+<div id="app">
 
-  <!-- TOP BAR -->
   <div class="topbar">
-    <div class="brand">
-      <div class="dot"></div>
-      <span>Backtesting Max Arena</span>
-      <span class="pair-tag" id="pairTag">XAU/USD</span>
-    </div>
-    <div class="status loading" id="statusBox" data-testid="status-box">
-      <div class="pulse"></div>
-      <span id="statusText">Loading…</span>
-      <button class="btn ghost" id="openSettings" data-testid="open-settings" style="padding:4px 8px; margin-left:4px;">⚙</button>
-    </div>
+    <div class="brand"><div class="dot"></div><span>Backtesting Arena</span><span class="pair-tag" id="pairTag">XAU/USD</span></div>
+    <div class="status loading" id="statusBox"><div class="pulse"></div><span id="statusText">Loading…</span></div>
   </div>
 
-  <!-- CHART (85%) -->
-  <div class="chart-wrap" id="chartWrap">
-    <div id="chart" data-testid="chart-container"></div>
-
-    <div class="hud" id="hud" style="display:none;">
-      <div class="ohlc" id="ohlc"></div>
-      <div class="progress" id="progressLabel"></div>
-    </div>
-
+  <div class="chart-wrap">
+    <div id="chart"></div>
+    <div class="hud" id="hud" style="display:none;"><div class="ohlc" id="ohlc"></div><div style="color:var(--accent)" id="progressLabel"></div></div>
     <div class="pnl-badge" id="pnlBadge" style="display:none;">
-      <span class="label">Balance</span>
-      <span class="value" id="balanceVal">$10,000.00</span>
-      <span class="label" style="margin-top:2px;">P&L</span>
-      <span class="value" id="pnlVal">$0.00</span>
+      <span class="label">Balance</span><span class="value" id="balanceVal">$10,000.00</span>
+      <span class="label" style="margin-top:2px;">Floating P&L</span><span class="value" id="pnlVal">$0.00</span>
     </div>
 
-    <!-- Overlays -->
     <div class="overlay" id="loadingOverlay">
-      <div class="card">
-        <div class="spinner"></div>
-        <h3>Loading Market Data</h3>
-        <p id="loadingMsg">Fetching XAU/USD historical data from TwelveData…</p>
-      </div>
-    </div>
-
-    <div class="overlay error" id="errorOverlay" style="display:none;">
-      <div class="card">
-        <h3>⚠ Connection Issue</h3>
-        <p id="errorMsg">Could not reach data source.</p>
-        <button id="retryBtn" data-testid="retry-btn">Retry</button>
-        <button id="openSettingsErr" data-testid="open-settings-err" style="background:transparent;color:var(--text);border:1px solid var(--line);margin-left:6px;">Settings</button>
-      </div>
+      <div class="card"><div class="spinner"></div><h3>Loading Data</h3><p>Mengambil data dari Google Sheets...</p></div>
     </div>
   </div>
 
-  <!-- CONTROLS (15%) -->
   <div class="controls">
     <div class="row scroll">
-      <span class="label">TF</span>
-      <div class="seg" id="tfSeg" data-testid="tf-segment">
-        <button data-tf="1min">1m</button>
-        <button data-tf="5min">5m</button>
-        <button data-tf="15min">15m</button>
-        <button data-tf="30min">30m</button>
-        <button data-tf="1h" class="active">1h</button>
-        <button data-tf="4h">4h</button>
-        <button data-tf="1day">1D</button>
-      </div>
-      <div class="grow"></div>
-      <div class="seg" id="speedSeg" data-testid="speed-segment">
+      <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">SPEED</span>
+      <div class="seg" id="speedSeg">
         <button data-speed="2000" class="active">1x</button>
         <button data-speed="800">2x</button>
         <button data-speed="300">5x</button>
-        <button data-speed="100">10x</button>
+        <button data-speed="50">MAX</button>
       </div>
+      <div class="grow"></div>
+      <button class="btn terminal" id="btnTerminal">💼 Terminal (0)</button>
     </div>
 
     <div class="row">
-      <button class="btn buy" id="buyBtn" data-testid="buy-btn">BUY</button>
-      <button class="btn sell" id="sellBtn" data-testid="sell-btn">SELL</button>
-      <button class="btn close" id="closeBtn" data-testid="close-btn" disabled>CLOSE</button>
+      <button class="btn buy" onclick="openOrderModal('BUY')">BUY</button>
+      <button class="btn sell" onclick="openOrderModal('SELL')">SELL</button>
       <div class="grow"></div>
-      <button class="btn" id="playBtn" data-testid="play-btn">▶ Play</button>
-      <button class="btn primary" id="nextBtn" data-testid="next-btn">Next ▶</button>
-      <button class="btn ghost" id="resetBtn" data-testid="reset-btn" title="Reset replay">↺</button>
+      <button class="btn" id="playBtn">▶ Play</button>
+      <button class="btn primary" id="nextBtn">Next ▶</button>
     </div>
   </div>
 </div>
 
-<!-- SETTINGS MODAL -->
-<div class="modal-bg" id="modal">
+<div class="modal-bg" id="orderModal">
   <div class="modal">
-    <h3>Settings</h3>
-
-    <label for="apiKeyInput">TwelveData API Key</label>
-    <input id="apiKeyInput" type="text" placeholder="Paste your API key" autocomplete="off" />
-    <div class="hint">
-      Free key dari <a href="https://twelvedata.com/" target="_blank" rel="noopener">twelvedata.com</a>.
-      Disimpan lokal di perangkat (localStorage).
-    </div>
-
-    <label for="symbolInput">Symbol</label>
-    <input id="symbolInput" type="text" value="XAU/USD" autocomplete="off" />
-
-    <label for="sizeInput">Candle Count (max 5000)</label>
-    <input id="sizeInput" type="number" value="500" min="100" max="5000" />
-
-    <label for="startIdxInput">Replay starts at candle #</label>
-    <input id="startIdxInput" type="number" value="50" min="10" />
-
+    <h3 id="orderTitle">New Order</h3>
+    <label>Lot Size</label><input type="number" id="inLot" value="0.10" step="0.01">
+    <label>Entry Price (Biarkan 0 untuk Harga Saat Ini)</label><input type="number" id="inEntry" value="0" step="0.1">
+    <label>Stop Loss (SL)</label><input type="number" id="inSl" value="0" step="0.1">
+    <label>Take Profit (TP)</label><input type="number" id="inTp" value="0" step="0.1">
     <div class="row-btn">
-      <button class="btn ghost" id="cancelSettings">Cancel</button>
-      <button class="btn primary" id="saveSettings" data-testid="save-settings">Save &amp; Reload</button>
+      <button class="btn ghost" onclick="closeModal('orderModal')">Cancel</button>
+      <button class="btn primary" id="confirmOrderBtn">Execute Order</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="terminalModal">
+  <div class="modal" style="max-width: 450px;">
+    <h3>💼 Terminal (Posisi Aktif)</h3>
+    <div style="overflow-y:auto; max-height:250px;">
+      <table class="term-table">
+        <thead><tr><th>Side</th><th>Lot</th><th>Entry</th><th>SL/TP</th><th>PnL</th><th></th></tr></thead>
+        <tbody id="terminalBody"></tbody>
+      </table>
+    </div>
+    <div class="row-btn">
+      <button class="btn ghost" onclick="closeModal('terminalModal')">Tutup Panel</button>
     </div>
   </div>
 </div>
@@ -407,572 +168,227 @@
 <script>
 (function() {
   'use strict';
+  const $ = id => document.getElementById(id);
+  
+  // STATE MANAGEMENT
+  // URL GOOGLE SHEETS ANDA (Pastikan diisi link CSV yang valid)
+  const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pub?output=csv";
+  
+  let allCandles = [], visibleIdx = 0, speedMs = 2000, playing = false, playTimer = null;
+  let balance = 10000.00;
+  let openTrades = []; // ARRAY MULTI-TRANSAKSI
+  let tempOrderSide = '';
 
-  /* ===========================
-     Telegram Mini App Integration
-     =========================== */
-  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-  if (tg) {
-    try {
-      tg.ready();
-      tg.expand();
-      if (tg.setHeaderColor) tg.setHeaderColor('#0b0f17');
-      if (tg.setBackgroundColor) tg.setBackgroundColor('#0b0f17');
-      if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
-    } catch (e) { /* no-op */ }
-  }
-
-  /* ===========================
-     State
-     =========================== */
-  const LS_KEY = 'bma_settings_v2';
-  const defaultSettings = {
-    apiKey: '910c8e0e5f994e32b57fc7cc795828e9',
-    symbol: 'XAU/USD',
-    interval: '1h',
-    size: 500,
-    startIdx: 50,
-  };
-  let settings = loadSettings();
-
-  let allCandles = [];     // full history from API
-  let visibleIdx = 0;      // current candle index shown (0-based, exclusive upper bound for some logic)
-  let speedMs = 2000;
-  let playing = false;
-  let playTimer = null;
-
-  // Trade state
-  let position = null;     // { side: 'buy'|'sell', entry: number, entryTime: number, size: 1 }
-  let balance = 10000;
-  let pnl = 0;
-
-  /* ===========================
-     DOM
-     =========================== */
-  const $ = (id) => document.getElementById(id);
-  const statusBox = $('statusBox');
-  const statusText = $('statusText');
-  const loadingOverlay = $('loadingOverlay');
-  const loadingMsg = $('loadingMsg');
-  const errorOverlay = $('errorOverlay');
-  const errorMsg = $('errorMsg');
-  const hud = $('hud');
-  const ohlcEl = $('ohlc');
-  const progressLabel = $('progressLabel');
-  const pnlBadge = $('pnlBadge');
-  const balanceVal = $('balanceVal');
-  const pnlVal = $('pnlVal');
-  const pairTag = $('pairTag');
-  const toastEl = $('toast');
-
-  /* ===========================
-     Chart Setup
-     =========================== */
-  if (typeof LightweightCharts === 'undefined') {
-    showError('Chart library failed to load. CDN mungkin diblokir. Periksa koneksi atau gunakan VPN.');
-    return;
-  }
-
+  // CHART SETUP
   const chart = LightweightCharts.createChart($('chart'), {
-    autoSize: true,
-    layout: {
-      background: { type: 'solid', color: '#0b0f17' },
-      textColor: '#8a97ad',
-      fontSize: 11,
-    },
-    grid: {
-      vertLines: { color: '#1a2233' },
-      horzLines: { color: '#1a2233' },
-    },
-    rightPriceScale: {
-      borderColor: '#1f2a3d',
-      scaleMargins: { top: 0.1, bottom: 0.1 },
-    },
-    timeScale: {
-      borderColor: '#1f2a3d',
-      timeVisible: true,
-      secondsVisible: false,
-      rightOffset: 8,
-      barSpacing: 8,
-    },
-    crosshair: {
-      mode: LightweightCharts.CrosshairMode.Normal,
-      vertLine: { color: '#3b82f6', width: 1, style: 2, labelBackgroundColor: '#3b82f6' },
-      horzLine: { color: '#3b82f6', width: 1, style: 2, labelBackgroundColor: '#3b82f6' },
-    },
-    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
-    handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+    autoSize: true, layout: { background: { type: 'solid', color: '#0b0f17' }, textColor: '#8a97ad' },
+    grid: { vertLines: { color: '#1a2233' }, horzLines: { color: '#1a2233' } },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal }
   });
+  const candleSeries = chart.addCandlestickSeries({ upColor: '#22c55e', downColor: '#ef4444', wickUpColor: '#22c55e', wickDownColor: '#ef4444' });
 
-  const candleSeries = chart.addCandlestickSeries({
-    upColor: '#22c55e',
-    downColor: '#ef4444',
-    borderUpColor: '#22c55e',
-    borderDownColor: '#ef4444',
-    wickUpColor: '#22c55e',
-    wickDownColor: '#ef4444',
-  });
-
-  // Marker entry line (separate series for the active position)
-  let entryPriceLine = null;
-
-  // Crosshair → HUD update
   chart.subscribeCrosshairMove((param) => {
-    if (!param || !param.seriesData || !param.seriesData.get) return;
-    const d = param.seriesData.get(candleSeries);
-    if (d) {
-      updateHUDFromCandle(d);
-    } else if (allCandles.length && visibleIdx > 0) {
-      updateHUDFromCandle(allCandles[visibleIdx - 1]);
+    if (param.seriesData) {
+      const d = param.seriesData.get(candleSeries);
+      if (d) updateHUD(d);
     }
   });
 
-  /* ===========================
-     Data Fetching
-     =========================== */
-async function fetchHistory() {
-    setStatus('loading', 'Loading…');
-    showOverlay(loadingOverlay, true);
-    showOverlay(errorOverlay, false);
-    loadingMsg.textContent = `Menarik database dari Google Sheets...`;
-
-    // PASTE LINK CSV GOOGLE SHEETS ANDA DI SINI
-    const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv"; 
-
+  // FETCH DATA DARI GOOGLE SHEETS
+  async function fetchHistory() {
     try {
-      if (!navigator.onLine) throw new Error('Perangkat sedang offline.');
-
-      // Tambahkan timestamp agar tidak terkena cache browser (selalu ambil data paling baru)
-      const res = await fetch(SPREADSHEET_CSV_URL + "&t=" + new Date().getTime());
+      const res = await fetch(SPREADSHEET_URL + "&t=" + new Date().getTime());
+      const csv = await res.text();
+      const rows = csv.trim().split('\n');
+      rows.shift(); // Buang header
       
-      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-      
-      const csvText = await res.text();
-      const rows = csvText.trim().split('\n');
-      
-      // Hapus baris pertama (Header: datetime, open, high, low, close)
-      rows.shift(); 
+      allCandles = rows.map(r => {
+        const c = r.split(',');
+        return { time: Math.floor(new Date((c[0]||'').replace(' ','T')+'Z').getTime()/1000), open: parseFloat(c[1]), high: parseFloat(c[2]), low: parseFloat(c[3]), close: parseFloat(c[4]) };
+      }).filter(c => c.time && c.close).sort((a,b) => a.time - b.time);
 
-      allCandles = rows.map((row) => {
-        const cols = row.split(',');
-        return {
-          // Format tanggal dari TwelveData/Sheets dikonversi menjadi Unix Timestamp
-          time: Math.floor(new Date((cols[0] || '').replace(' ', 'T') + 'Z').getTime() / 1000),
-          open: parseFloat(cols[1]),
-          high: parseFloat(cols[2]),
-          low: parseFloat(cols[3]),
-          close: parseFloat(cols[4]),
-        };
-      }).filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close))
-        .sort((a, b) => a.time - b.time); // Pastikan urut dari lama ke baru
-
-      if (!allCandles.length) throw new Error('Dataset kosong. Pastikan robot Apps Script sudah berjalan.');
-
-      pairTag.textContent = settings.symbol;
-      
-      // Tentukan berapa candle yang mau ditampilkan di awal (Start Index)
-      visibleIdx = Math.min(Math.max(parseInt(settings.startIdx) || 50, 5), allCandles.length - 1);
-
+      visibleIdx = Math.min(50, allCandles.length - 1);
       candleSeries.setData(allCandles.slice(0, visibleIdx));
-      chart.timeScale().fitContent();
-
-      setStatus('ok', `Database Lokal · Connected`);
-      showOverlay(loadingOverlay, false);
-      hud.style.display = 'flex';
-      pnlBadge.style.display = 'flex';
-      updateHUDFromCandle(allCandles[visibleIdx - 1]);
+      
+      $('loadingOverlay').style.display = 'none';
+      $('hud').style.display = 'flex'; $('pnlBadge').style.display = 'flex';
+      $('statusBox').className = 'status ok'; $('statusText').innerText = 'Connected';
+      updateHUD(allCandles[visibleIdx - 1]);
       updateProgress();
-      resetPositionUI();
-
-      toast(`Sukses memuat ${allCandles.length} candles`, 'success');
-    } catch (err) {
-      console.error('Fetch error:', err);
-      showError(err.message || 'Gagal terhubung ke Google Sheets.');
-    }
-    const url = new URL('https://api.twelvedata.com/time_series');
-    url.searchParams.set('symbol', settings.symbol);
-    url.searchParams.set('interval', settings.interval);
-    url.searchParams.set('start_date', '2026-06-01 00:00:00');
-    url.searchParams.set('end_date', '2026-06-05 23:59:00');
-    url.searchParams.set('outputsize', String(Math.min(Math.max(settings.size, 100), 5000)));
-    url.searchParams.set('format', 'JSON');
-    url.searchParams.set('order', 'ASC');
-    url.searchParams.set('apikey', settings.apiKey || 'demo');
-
-    try {
-      if (!navigator.onLine) throw new Error('Perangkat sedang offline.');
-
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 15000);
-
-      const res = await fetch(url.toString(), {
-        method: 'GET',
-        mode: 'cors',
-        cache: 'no-store',
-        signal: ctrl.signal,
-      });
-      clearTimeout(tid);
-
-      // TwelveData returns JSON body even on 401/429 — try to parse first
-      let json = null;
-      try { json = await res.json(); } catch (e) { /* not JSON */ }
-
-      if (!res.ok) {
-        if (res.status === 401 || (json && /api ?key/i.test(json.message || ''))) {
-          throw new Error('API key invalid atau belum di-set. Tap ⚙ Settings → masukkan TwelveData API key (free di twelvedata.com).');
-        }
-        if (res.status === 429) {
-          throw new Error('Rate limit tercapai (free tier: 8 req/min, 800/hari). Tunggu sebentar lalu retry.');
-        }
-        const apiMsg = (json && json.message) ? json.message : res.statusText;
-        throw new Error(`HTTP ${res.status}: ${apiMsg}`);
-      }
-
-      if (!json) throw new Error('Empty response from server.');
-
-      if (json.status === 'error' || json.code) {
-        const msg = json.message || 'API returned an error.';
-        if (/api ?key/i.test(msg)) {
-          throw new Error('API key invalid atau belum di-set. Tap ⚙ Settings → masukkan TwelveData API key (free di twelvedata.com).');
-        }
-        throw new Error(msg);
-      }
-      if (!json.values || !Array.isArray(json.values) || !json.values.length) {
-        throw new Error('No data returned. Check symbol/timeframe.');
-      }
-
-      allCandles = json.values.map((v) => ({
-        time: Math.floor(new Date((v.datetime || '').replace(' ', 'T') + 'Z').getTime() / 1000),
-        open: parseFloat(v.open),
-        high: parseFloat(v.high),
-        low: parseFloat(v.low),
-        close: parseFloat(v.close),
-      })).filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close))
-        .sort((a, b) => a.time - b.time);
-
-      if (!allCandles.length) throw new Error('Parsed dataset empty.');
-
-      pairTag.textContent = settings.symbol;
-      visibleIdx = Math.min(Math.max(parseInt(settings.startIdx) || 50, 5), allCandles.length - 1);
-
-      candleSeries.setData(allCandles.slice(0, visibleIdx));
-      chart.timeScale().fitContent();
-
-      setStatus('ok', `${settings.symbol} · ${settings.interval}`);
-      showOverlay(loadingOverlay, false);
-      hud.style.display = 'flex';
-      pnlBadge.style.display = 'flex';
-      updateHUDFromCandle(allCandles[visibleIdx - 1]);
-      updateProgress();
-      resetPositionUI();
-
-      toast(`Loaded ${allCandles.length} candles`, 'success');
-    } catch (err) {
-      console.error('Fetch error:', err);
-      const message = err && err.name === 'AbortError'
-        ? 'Request timeout (15s). Koneksi mungkin tidak stabil.'
-        : (err && err.message) || 'Unknown error';
-      showError(message);
+    } catch(e) {
+      $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Database';
+      toast("Gagal memuat data", "error");
     }
   }
 
-  function showError(message) {
-    setStatus('err', 'Error');
-    showOverlay(loadingOverlay, false);
-    errorMsg.textContent = message;
-    showOverlay(errorOverlay, true);
-  }
-
-  function showOverlay(el, on) {
-    el.style.display = on ? 'flex' : 'none';
-  }
-
-  function setStatus(kind, text) {
-    statusBox.className = `status ${kind}`;
-    statusText.textContent = text;
-  }
-
-  /* ===========================
-     Replay Engine
-     =========================== */
+  // REPLAY ENGINE & AUTO-CLOSE (SL/TP)
   function nextCandle() {
-    if (!allCandles.length) return;
-    if (visibleIdx >= allCandles.length) {
-      stopPlay();
-      toast('Replay finished — reached end of data.', 'success');
-      return;
-    }
+    if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data habis!', 'success'); return; }
+    
     const c = allCandles[visibleIdx];
     candleSeries.update(c);
-    visibleIdx += 1;
-    updateHUDFromCandle(c);
+    visibleIdx++;
+    updateHUD(c);
     updateProgress();
-    updatePnL(c.close);
-    if (tg && tg.HapticFeedback) {
-      try { tg.HapticFeedback.selectionChanged(); } catch (e) {}
+
+    // Cek SL & TP untuk setiap order aktif menggunakan High & Low Candle
+    let closedAny = false;
+    for (let i = openTrades.length - 1; i >= 0; i--) {
+      let t = openTrades[i];
+      let hitPrice = 0;
+      let reason = '';
+
+      if (t.side === 'BUY') {
+        if (t.sl > 0 && c.low <= t.sl) { hitPrice = t.sl; reason = 'SL Hit'; }
+        else if (t.tp > 0 && c.high >= t.tp) { hitPrice = t.tp; reason = 'TP Hit'; }
+      } else {
+        if (t.sl > 0 && c.high >= t.sl) { hitPrice = t.sl; reason = 'SL Hit'; }
+        else if (t.tp > 0 && c.low <= t.tp) { hitPrice = t.tp; reason = 'TP Hit'; }
+      }
+
+      if (hitPrice > 0) {
+        executeCloseTrade(t.id, hitPrice, reason);
+        closedAny = true;
+      }
     }
+
+    calculateFloatingPnL(c.close);
+    if(closedAny) renderTerminal();
   }
 
-  function startPlay() {
-    if (playing || !allCandles.length) return;
-    playing = true;
-    $('playBtn').textContent = '⏸ Pause';
-    playTimer = setInterval(() => {
-      if (visibleIdx >= allCandles.length) { stopPlay(); return; }
-      nextCandle();
-    }, speedMs);
+  function togglePlay() {
+    playing = !playing;
+    $('playBtn').innerHTML = playing ? '⏸ Pause' : '▶ Play';
+    if(playing) playTimer = setInterval(nextCandle, speedMs);
+    else clearInterval(playTimer);
   }
 
-  function stopPlay() {
-    playing = false;
-    $('playBtn').textContent = '▶ Play';
-    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  // TRADING SYSTEM (MULTI ORDER)
+  window.openOrderModal = function(side) {
+    if(!allCandles.length) return;
+    tempOrderSide = side;
+    $('orderTitle').innerText = `New ${side} Order`;
+    $('inEntry').value = "0"; // Reset ke market
+    $('orderModal').classList.add('open');
   }
 
-  function togglePlay() { playing ? stopPlay() : startPlay(); }
+  $('confirmOrderBtn').addEventListener('click', () => {
+    let lot = parseFloat($('inLot').value) || 0.1;
+    let entryInput = parseFloat($('inEntry').value) || 0;
+    let sl = parseFloat($('inSl').value) || 0;
+    let tp = parseFloat($('inTp').value) || 0;
+    
+    // Jika entry 0, gunakan harga close candle terakhir
+    let currentPx = allCandles[visibleIdx - 1].close;
+    let entry = entryInput > 0 ? entryInput : currentPx;
 
-  function resetReplay() {
-    stopPlay();
-    visibleIdx = Math.min(Math.max(parseInt(settings.startIdx) || 50, 5), allCandles.length - 1);
-    candleSeries.setData(allCandles.slice(0, visibleIdx));
-    chart.timeScale().fitContent();
-    updateHUDFromCandle(allCandles[visibleIdx - 1]);
-    updateProgress();
-    closePosition(true);
-    toast('Replay reset', 'success');
-  }
+    let trade = {
+      id: Date.now(),
+      side: tempOrderSide,
+      lot: lot,
+      entry: entry,
+      sl: sl,
+      tp: tp,
+      lineObj: null // Untuk garis di chart
+    };
 
-  /* ===========================
-     Trade Simulator
-     =========================== */
-  function openPosition(side) {
-    if (!allCandles.length || visibleIdx === 0) return;
-    if (position) {
-      toast('Position already open. Close first.', 'error');
-      return;
-    }
-    const entry = allCandles[visibleIdx - 1].close;
-    position = { side, entry, entryTime: allCandles[visibleIdx - 1].time, size: 1 };
-    $('closeBtn').disabled = false;
-    $('buyBtn').disabled = true;
-    $('sellBtn').disabled = true;
-    drawEntryLine();
-    updatePnL(entry);
-    toast(`${side.toUpperCase()} @ ${entry.toFixed(2)}`, 'success');
-    if (tg && tg.HapticFeedback) {
-      try { tg.HapticFeedback.impactOccurred('medium'); } catch (e) {}
-    }
-  }
-
-  function closePosition(silent) {
-    if (!position) {
-      if (!silent) toast('No open position', 'error');
-      return;
-    }
-    const px = allCandles[visibleIdx - 1].close;
-    const diff = position.side === 'buy' ? (px - position.entry) : (position.entry - px);
-    const tradePnL = diff * position.size * 100; // contract multiplier for XAU/USD ($1 per 0.01)
-    balance += tradePnL;
-    pnl = 0;
-    position = null;
-    if (entryPriceLine) {
-      candleSeries.removePriceLine(entryPriceLine);
-      entryPriceLine = null;
-    }
-    $('closeBtn').disabled = true;
-    $('buyBtn').disabled = false;
-    $('sellBtn').disabled = false;
-    refreshPnLBadge();
-    if (!silent) {
-      const tag = tradePnL >= 0 ? 'success' : 'error';
-      toast(`Closed @ ${px.toFixed(2)} · PnL ${fmtMoney(tradePnL)}`, tag);
-    }
-  }
-
-  function resetPositionUI() {
-    if (entryPriceLine) {
-      candleSeries.removePriceLine(entryPriceLine);
-      entryPriceLine = null;
-    }
-    position = null;
-    pnl = 0;
-    balance = 10000;
-    $('closeBtn').disabled = true;
-    $('buyBtn').disabled = false;
-    $('sellBtn').disabled = false;
-    refreshPnLBadge();
-  }
-
-  function drawEntryLine() {
-    if (!position) return;
-    if (entryPriceLine) candleSeries.removePriceLine(entryPriceLine);
-    entryPriceLine = candleSeries.createPriceLine({
-      price: position.entry,
-      color: position.side === 'buy' ? '#22c55e' : '#ef4444',
-      lineWidth: 1,
-      lineStyle: LightweightCharts.LineStyle.Dashed,
-      axisLabelVisible: true,
-      title: position.side.toUpperCase(),
+    // Buat Garis Posisi di Chart
+    trade.lineObj = candleSeries.createPriceLine({
+      price: entry,
+      color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
+      lineWidth: 1, lineStyle: 2, title: `${trade.side} ${lot}L`
     });
-  }
 
-  function updatePnL(currentPx) {
-    if (!position) { pnl = 0; refreshPnLBadge(); return; }
-    const diff = position.side === 'buy' ? (currentPx - position.entry) : (position.entry - currentPx);
-    pnl = diff * position.size * 100;
-    refreshPnLBadge();
-  }
-
-  function refreshPnLBadge() {
-    balanceVal.textContent = fmtMoney(balance);
-    pnlVal.textContent = fmtMoney(pnl);
-    pnlVal.classList.remove('pos', 'neg');
-    if (pnl > 0) pnlVal.classList.add('pos');
-    else if (pnl < 0) pnlVal.classList.add('neg');
-  }
-
-  function fmtMoney(n) {
-    const sign = n < 0 ? '-' : '';
-    return `${sign}$${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  }
-
-  /* ===========================
-     HUD / Progress
-     =========================== */
-  function updateHUDFromCandle(c) {
-    if (!c) return;
-    const color = c.close >= c.open ? '#22c55e' : '#ef4444';
-    ohlcEl.innerHTML =
-      `<span><b>O</b>${c.open.toFixed(2)}</span>` +
-      `<span><b>H</b>${c.high.toFixed(2)}</span>` +
-      `<span><b>L</b>${c.low.toFixed(2)}</span>` +
-      `<span style="color:${color}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`;
-  }
-
-  function updateProgress() {
-    progressLabel.textContent = `Replay ${visibleIdx} / ${allCandles.length}`;
-  }
-
-  /* ===========================
-     Toast
-     =========================== */
-  let toastTimer = null;
-  function toast(msg, kind) {
-    toastEl.textContent = msg;
-    toastEl.className = 'toast show ' + (kind || '');
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toastEl.className = 'toast ' + (kind || ''); }, 2200);
-  }
-
-  /* ===========================
-     Settings persistence
-     =========================== */
-  function loadSettings() {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return { ...defaultSettings };
-      const s = JSON.parse(raw);
-      return { ...defaultSettings, ...s };
-    } catch (e) { return { ...defaultSettings }; }
-  }
-  function saveSettings(s) {
-    settings = { ...settings, ...s };
-    try { localStorage.setItem(LS_KEY, JSON.stringify(settings)); } catch (e) {}
-  }
-
-  /* ===========================
-     Wire UI Events
-     =========================== */
-  // Timeframe segment
-  document.querySelectorAll('#tfSeg button').forEach((btn) => {
-    if (btn.dataset.tf === settings.interval) {
-      document.querySelectorAll('#tfSeg button').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-    }
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#tfSeg button').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      saveSettings({ interval: btn.dataset.tf });
-      stopPlay();
-      fetchHistory();
-    });
+    openTrades.push(trade);
+    closeModal('orderModal');
+    toast(`${trade.side} Executed @ ${entry}`, 'success');
+    calculateFloatingPnL(currentPx);
+    renderTerminal();
   });
 
-  // Speed segment
-  document.querySelectorAll('#speedSeg button').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#speedSeg button').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      speedMs = parseInt(btn.dataset.speed, 10);
-      if (playing) { stopPlay(); startPlay(); }
+  function calculateFloatingPnL(currentPx) {
+    let totalPnL = 0;
+    openTrades.forEach(t => {
+      let diff = t.side === 'BUY' ? (currentPx - t.entry) : (t.entry - currentPx);
+      t.livePnl = diff * t.lot * 100; // Multiplier XAU
+      totalPnL += t.livePnl;
     });
+
+    $('balanceVal').innerText = fmtMoney(balance);
+    $('pnlVal').innerText = fmtMoney(totalPnL);
+    $('pnlVal').className = 'value ' + (totalPnL >= 0 ? 'pos' : 'neg');
+    $('btnTerminal').innerText = `💼 Terminal (${openTrades.length})`;
+  }
+
+  window.executeCloseTrade = function(id, forcePrice = 0, reason = 'Manual') {
+    let idx = openTrades.findIndex(t => t.id === id);
+    if(idx === -1) return;
+    
+    let t = openTrades[idx];
+    let closePx = forcePrice > 0 ? forcePrice : allCandles[visibleIdx - 1].close;
+    let diff = t.side === 'BUY' ? (closePx - t.entry) : (t.entry - closePx);
+    let realizedPnL = diff * t.lot * 100;
+    
+    balance += realizedPnL;
+    candleSeries.removePriceLine(t.lineObj); // Hapus garis
+    openTrades.splice(idx, 1); // Hapus dari memori
+    
+    calculateFloatingPnL(closePx);
+    renderTerminal();
+    toast(`${t.side} Closed (${reason}) | PnL: ${fmtMoney(realizedPnL)}`, realizedPnL >= 0 ? 'success' : 'error');
+  }
+
+  // TERMINAL UI
+  $('btnTerminal').addEventListener('click', () => {
+    renderTerminal();
+    $('terminalModal').classList.add('open');
   });
 
+  function renderTerminal() {
+    let html = '';
+    if (openTrades.length === 0) {
+      html = '<tr><td colspan="6" style="text-align:center; padding:15px; color:var(--muted)">Tidak ada posisi terbuka</td></tr>';
+    } else {
+      openTrades.forEach(t => {
+        let pnlColor = t.livePnl >= 0 ? 'pos' : 'neg';
+        let slStr = t.sl > 0 ? t.sl : '-';
+        let tpStr = t.tp > 0 ? t.tp : '-';
+        html += `<tr>
+          <td style="color:var(--${t.side==='BUY'?'green':'red'})"><b>${t.side}</b></td>
+          <td>${t.lot}</td>
+          <td>${t.entry.toFixed(2)}</td>
+          <td style="font-size:9px; color:var(--muted)">S:${slStr}<br>T:${tpStr}</td>
+          <td class="${pnlColor}"><b>$${t.livePnl.toFixed(2)}</b></td>
+          <td><button class="btn-close" onclick="executeCloseTrade(${t.id})">X</button></td>
+        </tr>`;
+      });
+    }
+    $('terminalBody').innerHTML = html;
+  }
+
+  window.closeModal = function(id) { $(id).classList.remove('open'); }
+
+  // UTILS
+  function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
+  function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
+  function fmtMoney(n) { return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  let tTimer; function toast(m, k) { $('toast').textContent=m; $('toast').className='toast show '+k; clearTimeout(tTimer); tTimer=setTimeout(()=>$('toast').className='toast',2000); }
+
+  // EVENT LISTENERS
   $('nextBtn').addEventListener('click', nextCandle);
   $('playBtn').addEventListener('click', togglePlay);
-  $('resetBtn').addEventListener('click', resetReplay);
-  $('buyBtn').addEventListener('click', () => openPosition('buy'));
-  $('sellBtn').addEventListener('click', () => openPosition('sell'));
-  $('closeBtn').addEventListener('click', () => closePosition(false));
-  $('retryBtn').addEventListener('click', () => fetchHistory());
-
-  // Settings modal
-  const modal = $('modal');
-  function openModal() {
-    $('apiKeyInput').value = (settings.apiKey === 'demo' || !settings.apiKey) ? '' : settings.apiKey;
-    $('symbolInput').value = settings.symbol;
-    $('sizeInput').value = settings.size;
-    $('startIdxInput').value = settings.startIdx;
-    modal.classList.add('open');
-  }
-  function closeModal() { modal.classList.remove('open'); }
-
-  $('openSettings').addEventListener('click', openModal);
-  $('openSettingsErr').addEventListener('click', openModal);
-  $('cancelSettings').addEventListener('click', closeModal);
-  $('saveSettings').addEventListener('click', () => {
-    const apiKey = ($('apiKeyInput').value || '').trim() || defaultSettings.apiKey;
-    const symbol = ($('symbolInput').value || 'XAU/USD').trim();
-    const size = Math.min(Math.max(parseInt($('sizeInput').value, 10) || 500, 100), 5000);
-    const startIdx = Math.max(parseInt($('startIdxInput').value, 10) || 50, 10);
-    saveSettings({ apiKey, symbol, size, startIdx });
-    closeModal();
-    stopPlay();
-    fetchHistory();
+  document.querySelectorAll('#speedSeg button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#speedSeg button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active'); speedMs = parseInt(b.dataset.speed);
+      if(playing) { stopPlay(); togglePlay(); }
+    });
   });
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  function stopPlay() { playing = false; $('playBtn').innerHTML = '▶ Play'; clearInterval(playTimer); }
 
-  // Online / offline reactivity
-  window.addEventListener('online', () => {
-    if (!allCandles.length) {
-      toast('Back online — retrying…', 'success');
-      fetchHistory();
-    }
-  });
-  window.addEventListener('offline', () => {
-    toast('Offline — fetches paused', 'error');
-  });
-
-  // Window resize for chart (autoSize handles this, but resize timeScale on rotate)
-  window.addEventListener('resize', () => { chart.timeScale().fitContent(); }, { passive: true });
-
-  // Keyboard shortcut (desktop convenience)
-  window.addEventListener('keydown', (e) => {
-    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
-    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
-    else if (e.code === 'ArrowRight') { e.preventDefault(); nextCandle(); }
-    else if (e.key === 'b' || e.key === 'B') { openPosition('buy'); }
-    else if (e.key === 's' || e.key === 'S') { openPosition('sell'); }
-    else if (e.key === 'c' || e.key === 'C') { closePosition(false); }
-  });
-
-  /* ===========================
-     Boot
-     =========================== */
+  // BOOT
   fetchHistory();
-
 })();
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
