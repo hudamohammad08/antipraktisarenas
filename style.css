@@ -1,19 +1,7 @@
-body, html { margin: 0; padding: 0; background: #0b0f17; height: 100%; overflow: hidden; color: white; font-family: sans-serif; }
-#app { display: flex; flex-direction: column; height: 100vh; }
-
-.chart-container { position: relative; flex: 1; min-height: 0; }
-#chart { position: absolute; inset: 0; z-index: 1; }
-#zoneCanvas { 
-    position: absolute; inset: 0; z-index: 10; 
-    pointer-events: none; /* Penting: Default tidak menangkap mouse */
+body { margin: 0; padding: 0; background: #0b0f17; overflow: hidden; }
+#chart-container { position: relative; width: 100vw; height: 100vh; }
+#chart { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+#drawing-canvas { 
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; 
+    pointer-events: none; /* Penting: agar tidak memblokir chart */
 }
-#zoneCanvas.drawing-mode { 
-    pointer-events: auto; /* Hanya menangkap mouse jika sedang menggambar */
-    cursor: crosshair; 
-}
-
-.topbar { padding: 10px; background: #111827; display: flex; justify-content: space-between; }
-.controls { padding: 10px; background: #111827; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 5px; }
-.row { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; }
-button { padding: 8px 12px; background: #1a2233; color: #fff; border: 1px solid #333; cursor: pointer; border-radius: 4px; }
-button.active { background: #f5b301; color: #000; }
