@@ -7,7 +7,8 @@ const chart = LightweightCharts.createChart(document.body, {
         textColor: '#DDD',
     },
 });
-
+console.log("Isi variabel chart:", chart);
+console.log("Apakah addCandlestickSeries ada?", typeof chart.addCandlestickSeries);
 const candleSeries = chart.addCandlestickSeries();
 candleSeries.setData([
     { time: '2026-06-01', open: 100, high: 120, low: 90, close: 110 },
