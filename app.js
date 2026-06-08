@@ -1,35 +1,46 @@
-window.addEventListener('load', function() {
-    console.log("Memulai inisialisasi...");
-
-    // Cek apakah library sudah terload
+window.addEventListener('load', () => {
+    // 1. Cek apakah library benar-benar terdeteksi
     if (typeof LightweightCharts === 'undefined') {
-        console.error("Library LightweightCharts belum terload!");
+        console.error("Library LightweightCharts tidak ditemukan!");
         return;
     }
 
-    const chartContainer = document.getElementById('chart');
-    if (!chartContainer) {
-        console.error("Elemen #chart tidak ditemukan!");
+    const container = document.getElementById('chart');
+    if (!container) {
+        console.error("Element #chart tidak ditemukan!");
         return;
     }
 
-    // Buat chart
-    const chart = LightweightCharts.createChart(chartContainer, {
-        layout: { background: { color: '#0b0f17' }, textColor: '#8a97ad' },
-        width: chartContainer.clientWidth,
-        height: chartContainer.clientHeight
+    // 2. Inisialisasi Chart
+    // Kita gunakan format standar agar tidak terpengaruh minification
+    const chart = LightweightCharts.createChart(container, {
+        width: container.clientWidth,
+        height: container.clientHeight,
+        layout: {
+            background: { type: 'solid', color: '#0b0f17' },
+            textColor: '#8a97ad',
+        },
+        grid: {
+            vertLines: { color: '#1a2233' },
+            horzLines: { color: '#1a2233' },
+        },
     });
 
-    // Pastikan chart berhasil dibuat sebelum menambah series
-    if (chart && typeof chart.addCandlestickSeries === 'function') {
+    console.log("Objek chart dibuat:", chart);
+
+    // 3. Tambahkan Series
+    // Kita cek apakah fungsi ada di dalam objek 'chart'
+    if (typeof chart.addCandlestickSeries === 'function') {
         const candleSeries = chart.addCandlestickSeries();
-        console.log("CandleSeries berhasil dibuat!");
         
-        // Data dummy untuk tes
+        // Data Dummy
         candleSeries.setData([
-            { time: '2026-06-01', open: 10, high: 15, low: 8, close: 12 }
+            { time: '2026-06-01', open: 1800, high: 1820, low: 1790, close: 1810 },
+            { time: '2026-06-02', open: 1810, high: 1830, low: 1800, close: 1825 }
         ]);
+        
+        console.log("Chart berhasil diisi data.");
     } else {
-        console.error("Gagal membuat chart, objek tidak valid:", chart);
+        console.error("Fungsi addCandlestickSeries tidak ditemukan! Struktur objek:", Object.keys(chart));
     }
 });
