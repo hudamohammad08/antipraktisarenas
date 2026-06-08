@@ -2,136 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#0b0f17" />
-  <title>Backtesting Max Arena — XAU/USD</title>
-
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Backtesting Arena - Optimized</title>
   <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
-
   <div class="topbar">
-    <div class="brand"><div class="dot"></div><span>Backtesting Arena</span><span class="pair-tag">XAU/USD</span></div>
-    <div class="status loading" id="statusBox"><div class="pulse"></div><span id="statusText">Loading…</span></div>
+    <div class="brand"><span>Backtesting Arena</span></div>
+    <div class="status" id="statusBox">Loading...</div>
   </div>
-
-  <div class="chart-wrap">
+  
+  <div class="chart-container">
     <div id="chart"></div>
     <canvas id="zoneCanvas"></canvas>
-    
-    <div class="hud" id="hud" style="display:none;">
-      <div class="ohlc" id="ohlc"></div>
-      <div style="color:var(--accent)" id="progressLabel"></div>
-    </div>
-    
-    <div class="pnl-badge" id="pnlBadge" style="display:none;">
-      <span class="label">Balance</span><span class="value" id="balanceVal">$10,000.00</span>
-      <span class="label" style="margin-top:2px;">Floating P&L</span><span class="value" id="pnlVal">$0.00</span>
-    </div>
-
-    <div class="overlay" id="loadingOverlay">
-      <div class="card"><div class="spinner"></div><h3>Loading Data</h3><p>Membaca database dari Google Sheets...</p></div>
-    </div>
   </div>
 
   <div class="controls">
-    <div class="row scroll" style="padding-bottom: 4px; border-bottom: 1px solid var(--line);">
-      <span style="font-size: 10px; color: var(--accent); font-weight: bold; margin-right: 4px;">TOOLS:</span>
-      <div class="seg" id="toolSeg">
-        <button data-tool="cursor" class="active">🖱️ Pointer</button>
-        <button data-tool="trend">📈 Garis Tren</button>
-        <button data-tool="box">🟩 Persegi</button>
-        <button data-tool="fib">🧬 Fibonacci</button>
-        <button data-tool="pricerange">📏 Rentang Harga</button>
-        <button data-tool="circle">⭕ Lingkaran</button>
-        <button data-tool="long">🟢 Posisi Buy</button>
-        <button data-tool="short">🔴 Posisi Sell</button>
-        <button data-tool="path">🛣️ Jalur</button>
-      </div>
-      <button class="btn ghost" style="color: var(--red); border-color: rgba(239, 68, 68, 0.3); padding: 5px 8px; font-size: 11px;" onclick="clearAllDrawings()">🗑️ Clear</button>
+    <div class="row" id="toolSeg">
+      <button data-tool="cursor" class="active">🖱️ Pointer</button>
+      <button data-tool="trend">📈 Tren</button>
+      <button data-tool="box">🟩 Kotak</button>
+      <button data-tool="fib">🧬 Fib</button>
+      <button data-tool="long">🟢 Buy</button>
+      <button data-tool="short">🔴 Sell</button>
+      <button onclick="clearAllDrawings()" style="color:red">🗑️ Clear</button>
     </div>
-
-    <div class="row scroll" style="margin-top: 4px;">
-      <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">TF</span>
-      <div class="seg" id="tfSeg">
-        <button data-tf="Base" class="active">Base</button>
-        <button data-tf="1H">1H</button>
-        <button data-tf="4H">4H</button>
-        <button data-tf="1D">1D</button>
-      </div>
-
-      <span style="font-size: 10px; color: var(--muted); margin-left: 8px; margin-right: 2px;">SPEED</span>
-      <div class="seg" id="speedSeg">
-        <button data-speed="2000" class="active">1x</button>
-        <button data-speed="800">2x</button>
-        <button data-speed="300">5x</button>
-        <button data-speed="50">MAX</button>
-      </div>
-      <div class="grow"></div>
-      <button class="btn ghost" onclick="openModal('dateModal')">📅 Date</button>
-      <button class="btn terminal" id="btnTerminal">💼 (0)</button>
-    </div>
-
-    <div class="row" style="margin-top: 4px;">
-      <button class="btn buy" onclick="openOrderModal('BUY')">BUY</button>
-      <button class="btn sell" onclick="openOrderModal('SELL')">SELL</button>
-      <div class="grow"></div>
+    <div class="row">
       <button class="btn" id="playBtn">▶ Play</button>
-      <button class="btn primary" id="nextBtn">Next ▶</button>
+      <button class="btn" id="nextBtn">Next ▶</button>
     </div>
   </div>
 </div>
-
-<div class="modal-bg" id="dateModal">
-  <div class="modal">
-    <h3>📅 Pilih Tanggal Replay</h3>
-    <p style="font-size: 11px; color: var(--muted); margin-top:0;">Potong data dari Database untuk mensimulasikan rentang waktu tertentu.</p>
-    <label>Mulai dari (Start Date)</label>
-    <input type="date" id="inStartDate">
-    <label>Sampai dengan (End Date - Opsional)</label>
-    <input type="date" id="inEndDate">
-    <div class="row-btn">
-      <button class="btn ghost" onclick="closeModal('dateModal')">Cancel</button>
-      <button class="btn primary" onclick="applyFilters()">Terapkan Data</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-bg" id="orderModal">
-  <div class="modal">
-    <h3 id="orderTitle">New Order</h3>
-    <label>Lot Size</label><input type="number" id="inLot" value="0.10" step="0.01">
-    <label>Entry Price (Biarkan 0 untuk Market Execution)</label><input type="number" id="inEntry" value="0" step="0.1">
-    <label>Stop Loss (SL) Price</label><input type="number" id="inSl" value="0" step="0.1">
-    <label>Take Profit (TP) Price</label><input type="number" id="inTp" value="0" step="0.1">
-    <div class="row-btn">
-      <button class="btn ghost" onclick="closeModal('orderModal')">Cancel</button>
-      <button class="btn primary" id="confirmOrderBtn">Execute Order</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-bg" id="terminalModal">
-  <div class="modal" style="max-width: 450px;">
-    <h3>💼 Terminal (Posisi Aktif)</h3>
-    <div style="overflow-y:auto; max-height:250px;">
-      <table class="term-table">
-        <thead><tr><th>Side</th><th>Lot</th><th>Entry</th><th>SL/TP</th><th>PnL</th><th>Act</th></tr></thead>
-        <tbody id="terminalBody"></tbody>
-      </table>
-    </div>
-    <div class="row-btn">
-      <button class="btn ghost" onclick="closeModal('terminalModal')">Tutup Panel</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
 <script src="app.js"></script>
 </body>
 </html>
