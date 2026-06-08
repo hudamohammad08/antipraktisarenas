@@ -1,406 +1,978 @@
-<!DOCTYPE html>
-<html lang="id">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anti Praktis Arena - Multi Terminal</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: #131722; color: white; }
-        body { display: flex; flex-direction: column; }
-        
-        /* Area Chart TV */
-        #tradingview_widget { flex-grow: 1; width: 100%; display: none; }
-        
-        /* Dashboard Control Panel */
-        .panel { padding: 12px; background: #1e222d; border-top: 1px solid #2b2b2b; flex-shrink: 0; display: none; max-height: 60%; overflow-y: auto; box-sizing: border-box; }
-        
-        .info-header { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
-        #display-price { font-size: 16px; color: #ff9800; font-weight: bold; margin: 0; }
-        #display-balance { font-size: 16px; color: #2196F3; font-weight: bold; margin: 0; }
-        
-        /* Form Order Grid */
-        .order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .input-group { display: flex; flex-direction: column; }
-        .input-group label { font-size: 11px; color: #b2b5be; margin-bottom: 3px; }
-        .input-group input, .input-group select { padding: 6px; border-radius: 4px; border: 1px solid #363c4e; background: #131722; color: white; font-weight: bold; text-align: center; font-size: 13px; box-sizing: border-box; }
-        .inline-inputs { display: flex; gap: 4px; }
-        .inline-inputs select { width: 40%; text-align: center; padding: 4px; }
-        .inline-inputs input { width: 60%; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0b0f17" />
+<title>Backtesting Max Arena — XAU/USD</title>
 
-        .btn-container { display: flex; gap: 8px; margin-bottom: 12px; }
-        button { flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; }
-        .btn-sell { background: #ef5350; }
-        .btn-buy { background: #26a69a; }
-        
-        /* Tabel Terminal Trading */
-        .terminal-container { border-top: 1px solid #363c4e; padding-top: 8px; margin-top: 5px; }
-        .terminal-title { font-size: 12px; color: #b2b5be; margin: 0 0 6px 0; text-align: left; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-        .table-scroll { overflow-x: auto; max-height: 120px; overflow-y: auto; background: #131722; border-radius: 4px; border: 1px solid #2b2b2b; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; min-width: 450px; }
-        th { background: #1c2030; color: #787b86; padding: 6px 8px; font-weight: normal; border-bottom: 1px solid #2b2b2b; }
-        td { padding: 6px 8px; border-bottom: 1px solid #232733; vertical-align: middle; }
-        .badge-buy { color: #26a69a; font-weight: bold; }
-        .badge-sell { color: #ef5350; font-weight: bold; }
-        .btn-row-close { background: #ff9800; padding: 3px 6px; font-size: 10px; border-radius: 3px; width: auto; display: inline-block; }
+<!-- Telegram Mini App SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-        #loading-screen { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 16px; color: #b2b5be; text-align: center; padding: 20px; }
+<!-- Lightweight Charts (TradingView) via jsDelivr -->
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 
-        /* Admin CSS */
-        #admin-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); padding: 6px 10px; border-radius: 4px; font-size: 12px; z-index: 100; border: 1px solid #363c4e; color: white; }
-        #admin-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(19, 23, 34, 0.96); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-        .admin-box { background: #1e222d; padding: 20px; border-radius: 8px; width: 100%; max-width: 360px; border: 1px solid #363c4e; text-align: center; }
-        .admin-box select { width: 100%; padding: 8px; margin-bottom: 12px; background: #131722; color: white; border: 1px solid #363c4e; border-radius: 4px; box-sizing: border-box; }
-        .btn-admin-save { background: #2962ff; margin-bottom: 8px; }
-        .btn-admin-sheet { background: #00c853; margin-bottom: 8px; }
-        .btn-admin-close { background: #787b86; }
-    </style>
+<style>
+  :root {
+    --bg-0: #0b0f17;
+    --bg-1: #111827;
+    --bg-2: #1a2233;
+    --line: #1f2a3d;
+    --text: #e6edf7;
+    --muted: #8a97ad;
+    --accent: #f5b301;   /* gold for XAU */
+    --green: #22c55e;
+    --red:   #ef4444;
+    --blue:  #3b82f6;
+    --warn:  #f59e0b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    height: 100%;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--line);
+    gap: 8px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 14px; letter-spacing: 0.3px;
+  }
+  .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .pair-tag {
+    font-size: 11px; color: var(--accent);
+    background: rgba(245,179,1,0.08);
+    border: 1px solid rgba(245,179,1,0.25);
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted);
+  }
+  .status .pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .status.ok .pulse { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status.err .pulse { background: var(--red); }
+  .status.loading .pulse { background: var(--warn); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  /* CHART AREA — 85% */
+  .chart-wrap {
+    flex: 1 1 85%;
+    position: relative;
+    min-height: 0;
+    background: var(--bg-0);
+  }
+  #chart { position: absolute; inset: 0; }
+
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    background: rgba(11,15,23,0.92);
+    z-index: 5;
+    padding: 20px;
+  }
+  .overlay .card {
+    max-width: 320px;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .overlay h3 { margin: 0 0 8px; font-size: 15px; }
+  .overlay p { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .overlay button {
+    background: var(--accent); color: #0b0f17;
+    border: 0; border-radius: 6px;
+    padding: 8px 14px; font-weight: 700; font-size: 12px;
+    cursor: pointer;
+  }
+  .overlay.error h3 { color: var(--red); }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 10px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* HUD on chart */
+  .hud {
+    position: absolute; top: 8px; left: 8px; z-index: 3;
+    display: flex; flex-direction: column; gap: 4px;
+    background: rgba(17,24,39,0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px; color: var(--muted);
+    pointer-events: none;
+  }
+  .hud .ohlc { display: flex; gap: 8px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .hud .ohlc span b { color: var(--muted); font-weight: 500; margin-right: 2px; }
+  .hud .progress { color: var(--accent); }
+
+  .pnl-badge {
+    position: absolute; top: 8px; right: 8px; z-index: 3;
+    background: rgba(17,24,39,0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  }
+  .pnl-badge .label { color: var(--muted); font-size: 10px; }
+  .pnl-badge .value { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pnl-badge .pos { color: var(--green); }
+  .pnl-badge .neg { color: var(--red); }
+
+  /* CONTROL PANEL — 15% */
+  .controls {
+    flex: 0 0 auto;
+    min-height: 15dvh;
+    background: var(--bg-1);
+    border-top: 1px solid var(--line);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+  .row {
+    display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+  }
+  .row.scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .row.scroll::-webkit-scrollbar { display: none; }
+  .seg {
+    display: inline-flex;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .seg button {
+    background: transparent;
+    color: var(--muted);
+    border: 0;
+    padding: 6px 9px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .seg button.active {
+    background: var(--accent);
+    color: #0b0f17;
+  }
+  .seg button:not(.active):active { background: rgba(255,255,255,0.04); }
+
+  .btn {
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    white-space: nowrap;
+    transition: transform 0.05s ease, background 0.15s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); color: #0b0f17; border-color: var(--accent); }
+  .btn.buy { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn.sell { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn.close { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn.ghost { background: transparent; }
+
+  .grow { flex: 1 1 auto; }
+  .label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-right: 2px;
+  }
+
+  /* MODAL (settings) */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 50;
+    padding: 16px;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    width: 100%;
+    max-width: 360px;
+    padding: 16px;
+  }
+  .modal h3 { margin: 0 0 12px; font-size: 14px; }
+  .modal label { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 4px; }
+  .modal input, .modal select {
+    width: 100%;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  .modal .row-btn { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .hint { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .hint a { color: var(--accent); text-decoration: none; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 12px;
+    z-index: 60;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  /* Hide HUD on very small screens */
+  @media (max-width: 360px) {
+    .hud .ohlc { display: none; }
+  }
+</style>
 </head>
 <body>
+<div id="app" data-testid="app-root">
 
-    <button id="admin-btn" onclick="openAdmin()">⚙️ Admin</button>
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <span>Backtesting Max Arena</span>
+      <span class="pair-tag" id="pairTag">XAU/USD</span>
+    </div>
+    <div class="status loading" id="statusBox" data-testid="status-box">
+      <div class="pulse"></div>
+      <span id="statusText">Loading…</span>
+      <button class="btn ghost" id="openSettings" data-testid="open-settings" style="padding:4px 8px; margin-left:4px;">⚙</button>
+    </div>
+  </div>
 
-    <div id="admin-modal">
-        <div class="admin-box">
-            <h2>⚙️ Panel Admin</h2>
-            <button class="btn-admin-sheet" onclick="openGoogleSheet()">📝 Buka Google Sheets</button>
-            <hr style="border-color: #363c4e; margin: 15px 0;">
-            <p style="font-size: 13px; color: #b2b5be; margin-bottom: 8px;">Ganti Aset Instan:</p>
-            <select id="local-symbol">
-                <option value="FX:XAUUSD">Emas (XAUUSD)</option>
-                <option value="BINANCE:BTCUSDT">Bitcoin (BTCUSDT)</option>
-                <option value="BINANCE:ETHUSDT">Ethereum (ETHUSDT)</option>
-            </select>
-            <button class="btn-admin-save" onclick="applyLocalSymbol()">Terapkan Sementara</button>
-            <button class="btn-admin-close" onclick="closeAdmin()">Tutup Panel</button>
-        </div>
+  <!-- CHART (85%) -->
+  <div class="chart-wrap" id="chartWrap">
+    <div id="chart" data-testid="chart-container"></div>
+
+    <div class="hud" id="hud" style="display:none;">
+      <div class="ohlc" id="ohlc"></div>
+      <div class="progress" id="progressLabel"></div>
     </div>
 
-    <div id="loading-screen">Menyambungkan ke Server... 🔄</div>
-
-    <div id="tradingview_widget"></div>
-
-    <div class="panel" id="main-panel">
-        <div class="info-header">
-            <h3 id="display-price">Harga: --</h3>
-            <h3 id="display-balance">Saldo: $0.00</h3>
-        </div>
-        
-        <div class="order-grid">
-            <div class="input-group">
-                <label>Lot Size Volume</label>
-                <input type="number" id="lot-size" value="0.10" step="0.01" min="0.01">
-            </div>
-            <div class="input-group">
-                <label>Harga Entry (0 = Pasar)</label>
-                <input type="number" id="entry-price" value="0.00" step="0.01">
-            </div>
-            <div class="input-group">
-                <label>Stop Loss (SL)</label>
-                <div class="inline-inputs">
-                    <select id="sl-type">
-                        <option value="PRICE">Harga</option>
-                        <option value="DOLLAR">Uang $</option>
-                    </select>
-                    <input type="number" id="sl-val" value="0.00" step="0.01">
-                </div>
-            </div>
-            <div class="input-group">
-                <label>Take Profit (TP)</label>
-                <div class="inline-inputs">
-                    <select id="tp-type">
-                        <option value="PRICE">Harga</option>
-                        <option value="DOLLAR">Uang $</option>
-                    </select>
-                    <input type="number" id="tp-val" value="0.00" step="0.01">
-                </div>
-            </div>
-        </div>
-        
-        <div class="btn-container">
-            <button class="btn-sell" onclick="createOrder('SELL')">SELL</button>
-            <button class="btn-buy" onclick="createOrder('BUY')">BUY</button>
-        </div>
-
-        <div class="terminal-container">
-            <p class="terminal-title">Posisi Terbuka Terminal</p>
-            <div class="table-scroll">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Aset/Posisi</th>
-                            <th>Lot</th>
-                            <th>Harga Entry</th>
-                            <th>Harga Live</th>
-                            <th>Profit/Loss ($)</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="terminal-body">
-                        </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="pnl-badge" id="pnlBadge" style="display:none;">
+      <span class="label">Balance</span>
+      <span class="value" id="balanceVal">$10,000.00</span>
+      <span class="label" style="margin-top:2px;">P&L</span>
+      <span class="value" id="pnlVal">$0.00</span>
     </div>
 
-    <script>
-        // ========================================================
-        // KONEKSI DATABASE & SAKRAL KREATOR
-        // ========================================================
-        const LINK_CSV_GOOGLE_SHEET = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/pub?output=csv";
-        const LINK_EDIT_SHEET = "https://docs.google.com/spreadsheets/d/1vSe5vVYhDuO_XWUx0Nol67I_89VlEl2YIUW797yYqiksP5X1jsONaJVEoXhtzcfNrG7iVmiC9EWR50S/edit"; 
-        const BOT_TOKEN = "8776331759:AAFVup_qefWDme_yz7PYUvzDcXJNlJ70yLU";
-        const CHAT_ID = "-1003742641612";
-        const ADMIN_PIN = "1234";
-        // ========================================================
+    <!-- Overlays -->
+    <div class="overlay" id="loadingOverlay">
+      <div class="card">
+        <div class="spinner"></div>
+        <h3>Loading Market Data</h3>
+        <p id="loadingMsg">Fetching XAU/USD historical data from TwelveData…</p>
+      </div>
+    </div>
 
-        const tg = window.Telegram.WebApp;
-        tg.expand(); 
-        tg.enableClosingConfirmation(); 
-        tg.ready();
-        
-        const userName = tg.initDataUnsafe?.user?.first_name || "Trader";
+    <div class="overlay error" id="errorOverlay" style="display:none;">
+      <div class="card">
+        <h3>⚠ Connection Issue</h3>
+        <p id="errorMsg">Could not reach data source.</p>
+        <button id="retryBtn" data-testid="retry-btn">Retry</button>
+        <button id="openSettingsErr" data-testid="open-settings-err" style="background:transparent;color:var(--text);border:1px solid var(--line);margin-left:6px;">Settings</button>
+      </div>
+    </div>
+  </div>
 
-        // MENGAMBIL SALDO DARI LOCALSTORAGE
-        let balance = parseFloat(localStorage.getItem('arena_balance'));
-        if (isNaN(balance)) { balance = 10000.00; localStorage.setItem('arena_balance', balance); }
-        updateBalanceUI();
+  <!-- CONTROLS (15%) -->
+  <div class="controls">
+    <div class="row scroll">
+      <span class="label">TF</span>
+      <div class="seg" id="tfSeg" data-testid="tf-segment">
+        <button data-tf="1min">1m</button>
+        <button data-tf="5min">5m</button>
+        <button data-tf="15min">15m</button>
+        <button data-tf="30min">30m</button>
+        <button data-tf="1h" class="active">1h</button>
+        <button data-tf="4h">4h</button>
+        <button data-tf="1day">1D</button>
+      </div>
+      <div class="grow"></div>
+      <div class="seg" id="speedSeg" data-testid="speed-segment">
+        <button data-speed="2000" class="active">1x</button>
+        <button data-speed="800">2x</button>
+        <button data-speed="300">5x</button>
+        <button data-speed="100">10x</button>
+      </div>
+    </div>
 
-        let currentPrice = 0;
-        let activeSymbol = "FX:XAUUSD"; 
-        let priceInterval;
-        let coreEngineInterval;
-        
-        // ARRAY PENYIMPANAN RIWAYAT POSISI AKTIF (MULTI-TRADE)
-        let openTrades = [];
+    <div class="row">
+      <button class="btn buy" id="buyBtn" data-testid="buy-btn">BUY</button>
+      <button class="btn sell" id="sellBtn" data-testid="sell-btn">SELL</button>
+      <button class="btn close" id="closeBtn" data-testid="close-btn" disabled>CLOSE</button>
+      <div class="grow"></div>
+      <button class="btn" id="playBtn" data-testid="play-btn">▶ Play</button>
+      <button class="btn primary" id="nextBtn" data-testid="next-btn">Next ▶</button>
+      <button class="btn ghost" id="resetBtn" data-testid="reset-btn" title="Reset replay">↺</button>
+    </div>
+  </div>
+</div>
 
-        function updateBalanceUI() {
-            document.getElementById('display-balance').innerText = `Saldo: $${balance.toFixed(2)}`;
+<!-- SETTINGS MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Settings</h3>
+
+    <label for="apiKeyInput">TwelveData API Key</label>
+    <input id="apiKeyInput" type="text" placeholder="Paste your API key" autocomplete="off" />
+    <div class="hint">
+      Free key dari <a href="https://twelvedata.com/" target="_blank" rel="noopener">twelvedata.com</a>.
+      Disimpan lokal di perangkat (localStorage).
+    </div>
+
+    <label for="symbolInput">Symbol</label>
+    <input id="symbolInput" type="text" value="XAU/USD" autocomplete="off" />
+
+    <label for="sizeInput">Candle Count (max 5000)</label>
+    <input id="sizeInput" type="number" value="500" min="100" max="5000" />
+
+    <label for="startIdxInput">Replay starts at candle #</label>
+    <input id="startIdxInput" type="number" value="50" min="10" />
+
+    <div class="row-btn">
+      <button class="btn ghost" id="cancelSettings">Cancel</button>
+      <button class="btn primary" id="saveSettings" data-testid="save-settings">Save &amp; Reload</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ===========================
+     Telegram Mini App Integration
+     =========================== */
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  if (tg) {
+    try {
+      tg.ready();
+      tg.expand();
+      if (tg.setHeaderColor) tg.setHeaderColor('#0b0f17');
+      if (tg.setBackgroundColor) tg.setBackgroundColor('#0b0f17');
+      if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+    } catch (e) { /* no-op */ }
+  }
+
+  /* ===========================
+     State
+     =========================== */
+  const LS_KEY = 'bma_settings_v2';
+  const defaultSettings = {
+    apiKey: '910c8e0e5f994e32b57fc7cc795828e9',
+    symbol: 'XAU/USD',
+    interval: '1h',
+    size: 500,
+    startIdx: 50,
+  };
+  let settings = loadSettings();
+
+  let allCandles = [];     // full history from API
+  let visibleIdx = 0;      // current candle index shown (0-based, exclusive upper bound for some logic)
+  let speedMs = 2000;
+  let playing = false;
+  let playTimer = null;
+
+  // Trade state
+  let position = null;     // { side: 'buy'|'sell', entry: number, entryTime: number, size: 1 }
+  let balance = 10000;
+  let pnl = 0;
+
+  /* ===========================
+     DOM
+     =========================== */
+  const $ = (id) => document.getElementById(id);
+  const statusBox = $('statusBox');
+  const statusText = $('statusText');
+  const loadingOverlay = $('loadingOverlay');
+  const loadingMsg = $('loadingMsg');
+  const errorOverlay = $('errorOverlay');
+  const errorMsg = $('errorMsg');
+  const hud = $('hud');
+  const ohlcEl = $('ohlc');
+  const progressLabel = $('progressLabel');
+  const pnlBadge = $('pnlBadge');
+  const balanceVal = $('balanceVal');
+  const pnlVal = $('pnlVal');
+  const pairTag = $('pairTag');
+  const toastEl = $('toast');
+
+  /* ===========================
+     Chart Setup
+     =========================== */
+  if (typeof LightweightCharts === 'undefined') {
+    showError('Chart library failed to load. CDN mungkin diblokir. Periksa koneksi atau gunakan VPN.');
+    return;
+  }
+
+  const chart = LightweightCharts.createChart($('chart'), {
+    autoSize: true,
+    layout: {
+      background: { type: 'solid', color: '#0b0f17' },
+      textColor: '#8a97ad',
+      fontSize: 11,
+    },
+    grid: {
+      vertLines: { color: '#1a2233' },
+      horzLines: { color: '#1a2233' },
+    },
+    rightPriceScale: {
+      borderColor: '#1f2a3d',
+      scaleMargins: { top: 0.1, bottom: 0.1 },
+    },
+    timeScale: {
+      borderColor: '#1f2a3d',
+      timeVisible: true,
+      secondsVisible: false,
+      rightOffset: 8,
+      barSpacing: 8,
+    },
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Normal,
+      vertLine: { color: '#3b82f6', width: 1, style: 2, labelBackgroundColor: '#3b82f6' },
+      horzLine: { color: '#3b82f6', width: 1, style: 2, labelBackgroundColor: '#3b82f6' },
+    },
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
+    handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+  });
+
+  const candleSeries = chart.addCandlestickSeries({
+    upColor: '#22c55e',
+    downColor: '#ef4444',
+    borderUpColor: '#22c55e',
+    borderDownColor: '#ef4444',
+    wickUpColor: '#22c55e',
+    wickDownColor: '#ef4444',
+  });
+
+  // Marker entry line (separate series for the active position)
+  let entryPriceLine = null;
+
+  // Crosshair → HUD update
+  chart.subscribeCrosshairMove((param) => {
+    if (!param || !param.seriesData || !param.seriesData.get) return;
+    const d = param.seriesData.get(candleSeries);
+    if (d) {
+      updateHUDFromCandle(d);
+    } else if (allCandles.length && visibleIdx > 0) {
+      updateHUDFromCandle(allCandles[visibleIdx - 1]);
+    }
+  });
+
+  /* ===========================
+     Data Fetching
+     =========================== */
+async function fetchHistory() {
+    setStatus('loading', 'Loading…');
+    showOverlay(loadingOverlay, true);
+    showOverlay(errorOverlay, false);
+    loadingMsg.textContent = `Menarik database dari Google Sheets...`;
+
+    // PASTE LINK CSV GOOGLE SHEETS ANDA DI SINI
+    const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv"; 
+
+    try {
+      if (!navigator.onLine) throw new Error('Perangkat sedang offline.');
+
+      // Tambahkan timestamp agar tidak terkena cache browser (selalu ambil data paling baru)
+      const res = await fetch(SPREADSHEET_CSV_URL + "&t=" + new Date().getTime());
+      
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      
+      const csvText = await res.text();
+      const rows = csvText.trim().split('\n');
+      
+      // Hapus baris pertama (Header: datetime, open, high, low, close)
+      rows.shift(); 
+
+      allCandles = rows.map((row) => {
+        const cols = row.split(',');
+        return {
+          // Format tanggal dari TwelveData/Sheets dikonversi menjadi Unix Timestamp
+          time: Math.floor(new Date((cols[0] || '').replace(' ', 'T') + 'Z').getTime() / 1000),
+          open: parseFloat(cols[1]),
+          high: parseFloat(cols[2]),
+          low: parseFloat(cols[3]),
+          close: parseFloat(cols[4]),
+        };
+      }).filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close))
+        .sort((a, b) => a.time - b.time); // Pastikan urut dari lama ke baru
+
+      if (!allCandles.length) throw new Error('Dataset kosong. Pastikan robot Apps Script sudah berjalan.');
+
+      pairTag.textContent = settings.symbol;
+      
+      // Tentukan berapa candle yang mau ditampilkan di awal (Start Index)
+      visibleIdx = Math.min(Math.max(parseInt(settings.startIdx) || 50, 5), allCandles.length - 1);
+
+      candleSeries.setData(allCandles.slice(0, visibleIdx));
+      chart.timeScale().fitContent();
+
+      setStatus('ok', `Database Lokal · Connected`);
+      showOverlay(loadingOverlay, false);
+      hud.style.display = 'flex';
+      pnlBadge.style.display = 'flex';
+      updateHUDFromCandle(allCandles[visibleIdx - 1]);
+      updateProgress();
+      resetPositionUI();
+
+      toast(`Sukses memuat ${allCandles.length} candles`, 'success');
+    } catch (err) {
+      console.error('Fetch error:', err);
+      showError(err.message || 'Gagal terhubung ke Google Sheets.');
+    }
+    const url = new URL('https://api.twelvedata.com/time_series');
+    url.searchParams.set('symbol', settings.symbol);
+    url.searchParams.set('interval', settings.interval);
+    url.searchParams.set('start_date', '2026-06-01 00:00:00');
+    url.searchParams.set('end_date', '2026-06-05 23:59:00');
+    url.searchParams.set('outputsize', String(Math.min(Math.max(settings.size, 100), 5000)));
+    url.searchParams.set('format', 'JSON');
+    url.searchParams.set('order', 'ASC');
+    url.searchParams.set('apikey', settings.apiKey || 'demo');
+
+    try {
+      if (!navigator.onLine) throw new Error('Perangkat sedang offline.');
+
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 15000);
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-store',
+        signal: ctrl.signal,
+      });
+      clearTimeout(tid);
+
+      // TwelveData returns JSON body even on 401/429 — try to parse first
+      let json = null;
+      try { json = await res.json(); } catch (e) { /* not JSON */ }
+
+      if (!res.ok) {
+        if (res.status === 401 || (json && /api ?key/i.test(json.message || ''))) {
+          throw new Error('API key invalid atau belum di-set. Tap ⚙ Settings → masukkan TwelveData API key (free di twelvedata.com).');
         }
-
-        function openAdmin() {
-            let pin = prompt("Masukkan PIN Admin:");
-            if (pin === ADMIN_PIN) document.getElementById('admin-modal').style.display = 'flex';
+        if (res.status === 429) {
+          throw new Error('Rate limit tercapai (free tier: 8 req/min, 800/hari). Tunggu sebentar lalu retry.');
         }
-        function closeAdmin() { document.getElementById('admin-modal').style.display = 'none'; }
-        function openGoogleSheet() { window.open(LINK_EDIT_SHEET, '_blank'); }
-        function applyLocalSymbol() { activeSymbol = document.getElementById('local-symbol').value; closeAdmin(); startGame(); }
+        const apiMsg = (json && json.message) ? json.message : res.statusText;
+        throw new Error(`HTTP ${res.status}: ${apiMsg}`);
+      }
 
-        async function fetchAdminSettings() {
-            try {
-                const response = await fetch(LINK_CSV_GOOGLE_SHEET + "&t=" + new Date().getTime());
-                const data = await response.text();
-                const rows = data.split('\n');
-                const config = {};
-                rows.forEach(row => {
-                    const columns = row.split(',');
-                    if(columns.length >= 2) config[columns[0].trim()] = columns[1].trim();
-                });
-                if(config.Aset) activeSymbol = config.Aset;
-                startGame();
-            } catch (error) { setTimeout(startGame, 2000); }
+      if (!json) throw new Error('Empty response from server.');
+
+      if (json.status === 'error' || json.code) {
+        const msg = json.message || 'API returned an error.';
+        if (/api ?key/i.test(msg)) {
+          throw new Error('API key invalid atau belum di-set. Tap ⚙ Settings → masukkan TwelveData API key (free di twelvedata.com).');
         }
+        throw new Error(msg);
+      }
+      if (!json.values || !Array.isArray(json.values) || !json.values.length) {
+        throw new Error('No data returned. Check symbol/timeframe.');
+      }
 
-        function startGame() {
-            document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('tradingview_widget').style.display = 'block';
-            document.getElementById('main-panel').style.display = 'block';
-            document.getElementById('tradingview_widget').innerHTML = "";
+      allCandles = json.values.map((v) => ({
+        time: Math.floor(new Date((v.datetime || '').replace(' ', 'T') + 'Z').getTime() / 1000),
+        open: parseFloat(v.open),
+        high: parseFloat(v.high),
+        low: parseFloat(v.low),
+        close: parseFloat(v.close),
+      })).filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close))
+        .sort((a, b) => a.time - b.time);
 
-            new TradingView.widget({
-                "autosize": true, "symbol": activeSymbol, "interval": "1", "timezone": "Asia/Jakarta",
-                "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false,
-                "hide_top_toolbar": false, "hide_legend": false, "hide_side_toolbar": false, 
-                "allow_symbol_change": false, "save_image": false, "container_id": "tradingview_widget"
-            });
+      if (!allCandles.length) throw new Error('Parsed dataset empty.');
 
-            if (priceInterval) clearInterval(priceInterval);
-            fetchLivePrice();
-            priceInterval = setInterval(fetchLivePrice, 1000);
+      pairTag.textContent = settings.symbol;
+      visibleIdx = Math.min(Math.max(parseInt(settings.startIdx) || 50, 5), allCandles.length - 1);
 
-            // JALANKAN MESIN UTAMA PENGAWAS SL/TP DAN UPDATE TABEL TERMINAL
-            if (coreEngineInterval) clearInterval(coreEngineInterval);
-            coreEngineInterval = setInterval(runCoreEngine, 1000);
-        }
+      candleSeries.setData(allCandles.slice(0, visibleIdx));
+      chart.timeScale().fitContent();
 
-        function fetchLivePrice() {
-            let fetchSymbol = activeSymbol.includes('XAU') ? 'PAXGUSDT' : (activeSymbol.includes('BTC') ? 'BTCUSDT' : (activeSymbol.includes('ETH') ? 'ETHUSDT' : ''));
-            if (fetchSymbol !== "") {
-                fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${fetchSymbol}`)
-                    .then(r => r.json())
-                    .then(d => {
-                        if(d.price) {
-                            currentPrice = parseFloat(d.price);
-                            let displayName = activeSymbol.split(':')[1] || activeSymbol;
-                            document.getElementById('display-price').innerText = `${displayName}: $${currentPrice.toFixed(2)}`;
-                        }
-                    }).catch(() => {});
-            }
-        }
+      setStatus('ok', `${settings.symbol} · ${settings.interval}`);
+      showOverlay(loadingOverlay, false);
+      hud.style.display = 'flex';
+      pnlBadge.style.display = 'flex';
+      updateHUDFromCandle(allCandles[visibleIdx - 1]);
+      updateProgress();
+      resetPositionUI();
 
-        // --- SISTEM ORDER & LOGIKA MATEMATIKA STRUKTUR TRADING ---
-        function createOrder(dir) {
-            if (currentPrice <= 0) { alert("Tunggu sebentar, data harga live belum terkoneksi..."); return; }
+      toast(`Loaded ${allCandles.length} candles`, 'success');
+    } catch (err) {
+      console.error('Fetch error:', err);
+      const message = err && err.name === 'AbortError'
+        ? 'Request timeout (15s). Koneksi mungkin tidak stabil.'
+        : (err && err.message) || 'Unknown error';
+      showError(message);
+    }
+  }
 
-            let lot = parseFloat(document.getElementById('lot-size').value) || 0.1;
-            let manualEntry = parseFloat(document.getElementById('entry-price').value) || 0;
-            let slVal = parseFloat(document.getElementById('sl-val').value) || 0;
-            let slType = document.getElementById('sl-type').value;
-            let tpVal = parseFloat(document.getElementById('tp-val').value) || 0;
-            let tpType = document.getElementById('tp-type').value;
+  function showError(message) {
+    setStatus('err', 'Error');
+    showOverlay(loadingOverlay, false);
+    errorMsg.textContent = message;
+    showOverlay(errorOverlay, true);
+  }
 
-            let ePrice = manualEntry > 0 ? manualEntry : currentPrice;
-            let multiplier = activeSymbol.includes('XAU') ? 100 : 1;
+  function showOverlay(el, on) {
+    el.style.display = on ? 'flex' : 'none';
+  }
 
-            // KALKULASI HARGA ABSOLUT UNTUK STOP LOSS (SL)
-            let calculatedSL = 0;
-            if (slVal > 0) {
-                if (slType === 'PRICE') {
-                    calculatedSL = slVal;
-                } else { // Jika tipe Dollar ($)
-                    let pPoints = slVal / (lot * multiplier);
-                    calculatedSL = dir === 'BUY' ? (ePrice - pPoints) : (ePrice + pPoints);
-                }
-            }
+  function setStatus(kind, text) {
+    statusBox.className = `status ${kind}`;
+    statusText.textContent = text;
+  }
 
-            // KALKULASI HARGA ABSOLUT UNTUK TAKE PROFIT (TP)
-            let calculatedTP = 0;
-            if (tpVal > 0) {
-                if (tpType === 'PRICE') {
-                    calculatedTP = tpVal;
-                } else { // Jika tipe Dollar ($)
-                    let pPoints = tpVal / (lot * multiplier);
-                    calculatedTP = dir === 'BUY' ? (ePrice + pPoints) : (ePrice - pPoints);
-                }
-            }
+  /* ===========================
+     Replay Engine
+     =========================== */
+  function nextCandle() {
+    if (!allCandles.length) return;
+    if (visibleIdx >= allCandles.length) {
+      stopPlay();
+      toast('Replay finished — reached end of data.', 'success');
+      return;
+    }
+    const c = allCandles[visibleIdx];
+    candleSeries.update(c);
+    visibleIdx += 1;
+    updateHUDFromCandle(c);
+    updateProgress();
+    updatePnL(c.close);
+    if (tg && tg.HapticFeedback) {
+      try { tg.HapticFeedback.selectionChanged(); } catch (e) {}
+    }
+  }
 
-            // BUAT OBJEK TRANSAKSI UNTUK TABEL TERMINAL
-            let newTrade = {
-                id: Date.now() + Math.floor(Math.random() * 1000),
-                symbol: activeSymbol,
-                displayName: activeSymbol.split(':')[1] || activeSymbol,
-                dir: dir,
-                lot: lot,
-                entryPrice: ePrice,
-                slPrice: calculatedSL,
-                tpPrice: calculatedTP,
-                multiplier: multiplier
-            };
+  function startPlay() {
+    if (playing || !allCandles.length) return;
+    playing = true;
+    $('playBtn').textContent = '⏸ Pause';
+    playTimer = setInterval(() => {
+      if (visibleIdx >= allCandles.length) { stopPlay(); return; }
+      nextCandle();
+    }, speedMs);
+  }
 
-            openTrades.push(newTrade);
-            renderTerminal();
+  function stopPlay() {
+    playing = false;
+    $('playBtn').textContent = '▶ Play';
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  }
 
-            // KIRIM STRUK OPEN KE CHANNEL TELEGRAM
-            let msg = `🚀 *TRADE OPEN*\n👤 Trader: *${userName}*\n📈 Asset: *${newTrade.displayName}*\n🛒 Posisi: *${dir}* (${lot} Lot)\n🚪 Entry Price: *$${ePrice.toFixed(2)}*\n🛑 SL Target: ${calculatedSL > 0 ? '$'+calculatedSL.toFixed(2) : 'Tanpa SL'}\n🎯 TP Target: ${calculatedTP > 0 ? '$'+calculatedTP.toFixed(2) : 'Tanpa TP'}`;
-            sendToChannel(msg);
+  function togglePlay() { playing ? stopPlay() : startPlay(); }
 
-            // RESET INPUT INPUT UNTUK MEMUDAHKAN ORDER BERIKUTNYA
-            document.getElementById('entry-price').value = "0.00";
-            document.getElementById('sl-val').value = "0.00";
-            document.getElementById('tp-val').value = "0.00";
-        }
+  function resetReplay() {
+    stopPlay();
+    visibleIdx = Math.min(Math.max(parseInt(settings.startIdx) || 50, 5), allCandles.length - 1);
+    candleSeries.setData(allCandles.slice(0, visibleIdx));
+    chart.timeScale().fitContent();
+    updateHUDFromCandle(allCandles[visibleIdx - 1]);
+    updateProgress();
+    closePosition(true);
+    toast('Replay reset', 'success');
+  }
 
-        // --- MESIN PENGURUS RIWAYAT TABEL & AUTO CLOSING ---
-        function runCoreEngine() {
-            if (openTrades.length === 0) {
-                document.getElementById('terminal-body').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#787b86; padding:15px;">Tidak ada posisi berjalan. terminal kosong.</td></tr>`;
-                return;
-            }
+  /* ===========================
+     Trade Simulator
+     =========================== */
+  function openPosition(side) {
+    if (!allCandles.length || visibleIdx === 0) return;
+    if (position) {
+      toast('Position already open. Close first.', 'error');
+      return;
+    }
+    const entry = allCandles[visibleIdx - 1].close;
+    position = { side, entry, entryTime: allCandles[visibleIdx - 1].time, size: 1 };
+    $('closeBtn').disabled = false;
+    $('buyBtn').disabled = true;
+    $('sellBtn').disabled = true;
+    drawEntryLine();
+    updatePnL(entry);
+    toast(`${side.toUpperCase()} @ ${entry.toFixed(2)}`, 'success');
+    if (tg && tg.HapticFeedback) {
+      try { tg.HapticFeedback.impactOccurred('medium'); } catch (e) {}
+    }
+  }
 
-            let tbody = document.getElementById('terminal-body');
-            let html = "";
+  function closePosition(silent) {
+    if (!position) {
+      if (!silent) toast('No open position', 'error');
+      return;
+    }
+    const px = allCandles[visibleIdx - 1].close;
+    const diff = position.side === 'buy' ? (px - position.entry) : (position.entry - px);
+    const tradePnL = diff * position.size * 100; // contract multiplier for XAU/USD ($1 per 0.01)
+    balance += tradePnL;
+    pnl = 0;
+    position = null;
+    if (entryPriceLine) {
+      candleSeries.removePriceLine(entryPriceLine);
+      entryPriceLine = null;
+    }
+    $('closeBtn').disabled = true;
+    $('buyBtn').disabled = false;
+    $('sellBtn').disabled = false;
+    refreshPnLBadge();
+    if (!silent) {
+      const tag = tradePnL >= 0 ? 'success' : 'error';
+      toast(`Closed @ ${px.toFixed(2)} · PnL ${fmtMoney(tradePnL)}`, tag);
+    }
+  }
 
-            // LOOP MENGECEK SETIAP TRANSKASI AKTIF SATU PER SATU
-            for (let i = openTrades.length - 1; i >= 0; i--) {
-                let trade = openTrades[i];
-                
-                // Hitung Floating Untung/Rugi secara real-time
-                let pnlPoints = trade.dir === 'BUY' ? (currentPrice - trade.entryPrice) : (trade.entryPrice - currentPrice);
-                let currentPnL = pnlPoints * trade.lot * trade.multiplier;
+  function resetPositionUI() {
+    if (entryPriceLine) {
+      candleSeries.removePriceLine(entryPriceLine);
+      entryPriceLine = null;
+    }
+    position = null;
+    pnl = 0;
+    balance = 10000;
+    $('closeBtn').disabled = true;
+    $('buyBtn').disabled = false;
+    $('sellBtn').disabled = false;
+    refreshPnLBadge();
+  }
 
-                // SISTEM DETEKSI OTOMATIS AUTO CLOSE (HIT SL / HIT TP)
-                if (trade.slPrice > 0) {
-                    if ((trade.dir === 'BUY' && currentPrice <= trade.slPrice) || (trade.dir === 'SELL' && currentPrice >= trade.slPrice)) {
-                        closeTradeEngine(trade.id, 'Hit SL');
-                        continue;
-                    }
-                }
-                if (trade.tpPrice > 0) {
-                    if ((trade.dir === 'BUY' && currentPrice >= trade.tpPrice) || (trade.dir === 'SELL' && currentPrice <= trade.tpPrice)) {
-                        closeTradeEngine(trade.id, 'Hit TP');
-                        continue;
-                    }
-                }
+  function drawEntryLine() {
+    if (!position) return;
+    if (entryPriceLine) candleSeries.removePriceLine(entryPriceLine);
+    entryPriceLine = candleSeries.createPriceLine({
+      price: position.entry,
+      color: position.side === 'buy' ? '#22c55e' : '#ef4444',
+      lineWidth: 1,
+      lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: position.side.toUpperCase(),
+    });
+  }
 
-                // RENDERING ROW BARIS TABEL VISUAL USER
-                let pnlStyle = currentPnL >= 0 ? "color:#26a69a; font-weight:bold;" : "color:#ef5350; font-weight:bold;";
-                let dirClass = trade.dir === 'BUY' ? 'badge-buy' : 'badge-sell';
+  function updatePnL(currentPx) {
+    if (!position) { pnl = 0; refreshPnLBadge(); return; }
+    const diff = position.side === 'buy' ? (currentPx - position.entry) : (position.entry - currentPx);
+    pnl = diff * position.size * 100;
+    refreshPnLBadge();
+  }
 
-                html += `<tr>
-                    <td>${trade.displayName} <span class="${dirClass}">[${trade.dir}]</span></td>
-                    <td>${trade.lot.toFixed(2)}</td>
-                    <td>$${trade.entryPrice.toFixed(2)}</td>
-                    <td>$${currentPrice.toFixed(2)}</td>
-                    <td style="${pnlStyle}">${currentPnL >= 0 ? '+' : ''}$${currentPnL.toFixed(2)}</td>
-                    <td><button class="btn-row-close" onclick="closeTradeEngine(${trade.id}, 'MANUAL')">CLOSE</button></td>
-                </tr>`;
-            }
+  function refreshPnLBadge() {
+    balanceVal.textContent = fmtMoney(balance);
+    pnlVal.textContent = fmtMoney(pnl);
+    pnlVal.classList.remove('pos', 'neg');
+    if (pnl > 0) pnlVal.classList.add('pos');
+    else if (pnl < 0) pnlVal.classList.add('neg');
+  }
 
-            if(html !== "") tbody.innerHTML = html;
-        }
+  function fmtMoney(n) {
+    const sign = n < 0 ? '-' : '';
+    return `${sign}$${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 
-        function renderTerminal() {
-            if (openTrades.length === 0) {
-                document.getElementById('terminal-body').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#787b86; padding:15px;">Tidak ada posisi berjalan. terminal kosong.</td></tr>`;
-            }
-        }
+  /* ===========================
+     HUD / Progress
+     =========================== */
+  function updateHUDFromCandle(c) {
+    if (!c) return;
+    const color = c.close >= c.open ? '#22c55e' : '#ef4444';
+    ohlcEl.innerHTML =
+      `<span><b>O</b>${c.open.toFixed(2)}</span>` +
+      `<span><b>H</b>${c.high.toFixed(2)}</span>` +
+      `<span><b>L</b>${c.low.toFixed(2)}</span>` +
+      `<span style="color:${color}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`;
+  }
 
-        function closeTradeEngine(id, reason) {
-            let tradeIndex = openTrades.findIndex(t => t.id === id);
-            if (tradeIndex === -1) return;
+  function updateProgress() {
+    progressLabel.textContent = `Replay ${visibleIdx} / ${allCandles.length}`;
+  }
 
-            let trade = openTrades[tradeIndex];
-            let pnlPoints = trade.dir === 'BUY' ? (currentPrice - trade.entryPrice) : (trade.entryPrice - currentPrice);
-            let finalPnL = pnlPoints * trade.lot * trade.multiplier;
+  /* ===========================
+     Toast
+     =========================== */
+  let toastTimer = null;
+  function toast(msg, kind) {
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show ' + (kind || '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.className = 'toast ' + (kind || ''); }, 2200);
+  }
 
-            // AKUMULASI PNL KE SALDO AKUN UTAMA
-            balance += finalPnL;
-            if (balance <= 0) {
-                alert("🚨 MARGIN CALL! Saldo Anda hancur total. Akun di-reset otomatis ke $10,000.");
-                balance = 10000.00;
-            }
-            localStorage.setItem('arena_balance', balance);
-            updateBalanceUI();
+  /* ===========================
+     Settings persistence
+     =========================== */
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return { ...defaultSettings };
+      const s = JSON.parse(raw);
+      return { ...defaultSettings, ...s };
+    } catch (e) { return { ...defaultSettings }; }
+  }
+  function saveSettings(s) {
+    settings = { ...settings, ...s };
+    try { localStorage.setItem(LS_KEY, JSON.stringify(settings)); } catch (e) {}
+  }
 
-            // KELUARKAN DATA DARI LIST RIWAYAT BERJALAN
-            openTrades.splice(tradeIndex, 1);
-            renderTerminal();
+  /* ===========================
+     Wire UI Events
+     =========================== */
+  // Timeframe segment
+  document.querySelectorAll('#tfSeg button').forEach((btn) => {
+    if (btn.dataset.tf === settings.interval) {
+      document.querySelectorAll('#tfSeg button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#tfSeg button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      saveSettings({ interval: btn.dataset.tf });
+      stopPlay();
+      fetchHistory();
+    });
+  });
 
-            // FORMAT LAPORAN PERSIS SESUAI PERMINTAAN REVISI ANDA
-            let resultStatus = finalPnL >= 0 ? "WIN ✅" : "LOSS ❌";
-            let telegramMsg = `📊 *TRADE REPORT*\n\n`+
-                              `👤 Trader: *${userName}*\n`+
-                              `📈 Asset: *${trade.displayName}*\n`+
-                              `🛒 Posisi: *${trade.dir}* (${trade.lot.toFixed(2)} Lot)\n`+
-                              `🎯 Reason: *${reason === 'MANUAL' ? 'Closed Manual' : reason}*\n`+
-                              `🚪 Entry Price: *$${trade.entryPrice.toFixed(2)}*\n`+
-                              `🚪 Exit Price: *$${currentPrice.toFixed(2)}*\n`+
-                              `📉 Hasil: *${resultStatus}*\n`+
-                              `💰 PnL: *$${finalPnL.toFixed(2)}*\n`+
-                              `💼 Saldo Akhir: *$${balance.toFixed(2)}*`;
+  // Speed segment
+  document.querySelectorAll('#speedSeg button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#speedSeg button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      speedMs = parseInt(btn.dataset.speed, 10);
+      if (playing) { stopPlay(); startPlay(); }
+    });
+  });
 
-            sendToChannel(telegramMsg);
-        }
+  $('nextBtn').addEventListener('click', nextCandle);
+  $('playBtn').addEventListener('click', togglePlay);
+  $('resetBtn').addEventListener('click', resetReplay);
+  $('buyBtn').addEventListener('click', () => openPosition('buy'));
+  $('sellBtn').addEventListener('click', () => openPosition('sell'));
+  $('closeBtn').addEventListener('click', () => closePosition(false));
+  $('retryBtn').addEventListener('click', () => fetchHistory());
 
-        function sendToChannel(msg) {
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: "Markdown" })
-            });
-        }
+  // Settings modal
+  const modal = $('modal');
+  function openModal() {
+    $('apiKeyInput').value = (settings.apiKey === 'demo' || !settings.apiKey) ? '' : settings.apiKey;
+    $('symbolInput').value = settings.symbol;
+    $('sizeInput').value = settings.size;
+    $('startIdxInput').value = settings.startIdx;
+    modal.classList.add('open');
+  }
+  function closeModal() { modal.classList.remove('open'); }
 
-        fetchAdminSettings();
-    </script>
+  $('openSettings').addEventListener('click', openModal);
+  $('openSettingsErr').addEventListener('click', openModal);
+  $('cancelSettings').addEventListener('click', closeModal);
+  $('saveSettings').addEventListener('click', () => {
+    const apiKey = ($('apiKeyInput').value || '').trim() || defaultSettings.apiKey;
+    const symbol = ($('symbolInput').value || 'XAU/USD').trim();
+    const size = Math.min(Math.max(parseInt($('sizeInput').value, 10) || 500, 100), 5000);
+    const startIdx = Math.max(parseInt($('startIdxInput').value, 10) || 50, 10);
+    saveSettings({ apiKey, symbol, size, startIdx });
+    closeModal();
+    stopPlay();
+    fetchHistory();
+  });
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  // Online / offline reactivity
+  window.addEventListener('online', () => {
+    if (!allCandles.length) {
+      toast('Back online — retrying…', 'success');
+      fetchHistory();
+    }
+  });
+  window.addEventListener('offline', () => {
+    toast('Offline — fetches paused', 'error');
+  });
+
+  // Window resize for chart (autoSize handles this, but resize timeScale on rotate)
+  window.addEventListener('resize', () => { chart.timeScale().fitContent(); }, { passive: true });
+
+  // Keyboard shortcut (desktop convenience)
+  window.addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    else if (e.code === 'ArrowRight') { e.preventDefault(); nextCandle(); }
+    else if (e.key === 'b' || e.key === 'B') { openPosition('buy'); }
+    else if (e.key === 's' || e.key === 'S') { openPosition('sell'); }
+    else if (e.key === 'c' || e.key === 'C') { closePosition(false); }
+  });
+
+  /* ===========================
+     Boot
+     =========================== */
+  fetchHistory();
+
+})();
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
