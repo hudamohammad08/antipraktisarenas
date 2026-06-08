@@ -207,8 +207,8 @@
   // ==========================================
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv";
   
-  let masterCandles = []; // Seluruh data asli dari Google Sheets
-  let allCandles = [];    // Data yang sudah difilter Tanggal & TF
+  let masterCandles = []; // Seluruh data asli hasil filtrasi weekend
+  let allCandles = [];    // Data aktif running
   let visibleIdx = 0, speedMs = 2000, playing = false, playTimer = null;
   let currentTF = 'Base'; 
   
@@ -226,8 +226,8 @@
     timeScale: { 
       borderColor: '#1f2a3d', 
       timeVisible: true,
-      rightOffset: 5, // Ruang lega alami di kanan
-      barSpacing: 10  // Lebar candle normal
+      rightOffset: 10,
+      barSpacing: 15
     }
   });
   
@@ -244,9 +244,6 @@
     }
   });
 
-  // ==========================================
-  // ROBUST NUMBER PARSER
-  // ==========================================
   function parseCleanNumber(str) {
     if (!str) return 0;
     let s = str.toString().replace(/['"\s]/g, '');
@@ -259,7 +256,7 @@
   }
 
   // ==========================================
-  // FETCH DATA UTAMA
+  // FETCH & FILTER WEEKEND DUMMY BARS
   // ==========================================
   async function fetchHistory() {
     try {
@@ -270,7 +267,8 @@
       const rows = csv.trim().split('\n');
       rows.shift(); 
       
-      masterCandles = rows.map(r => {
+      // 1. Parsing awal seluruh baris data
+      const parsed = rows.map(r => {
         const cols = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         let timeStr = (cols[0] || '').replace(/["']/g, ''); 
         return { 
@@ -281,15 +279,26 @@
           close: parseCleanNumber(cols[4]),
           rawDate: timeStr 
         };
-      }).filter(c => c.time && c.close && c.close > 0 && c.high > c.low).sort((a,b) => a.time - b.time);
+      }).filter(c => c.time && c.close && c.close > 0).sort((a,b) => a.time - b.time);
 
-      if(masterCandles.length === 0) throw new Error("Dataset kosong.");
+      if(parsed.length === 0) throw new Error("Dataset kosong.");
 
-      // Setup Tanggal Default
+      // 2. SMART FILTER: Buang telak barisan data weekend stagnan/dummy (Sabtu & Minggu)
+      masterCandles = parsed.filter(c => {
+        const d = new Date(c.time * 1000);
+        const day = d.getUTCDay(); // 0 = Minggu, 6 = Sabtu
+        const isWeekend = (day === 0 || day === 6);
+        const isDummyFlat = (c.high - c.low) < 0.5; // Mengeliminasi flat noise bernilai ~0.2 sewaktu market tutup
+        
+        if (isWeekend && isDummyFlat) return false; 
+        return true;
+      });
+
+      // Setup Tanggal Default dari data bersih
       $('inStartDate').value = masterCandles[0].rawDate.split(' ')[0];
       $('inEndDate').value = masterCandles[masterCandles.length - 1].rawDate.split(' ')[0];
 
-      applyFilters(); // Eksekusi filter & render
+      applyFilters(); 
 
       $('loadingOverlay').style.display = 'none';
       $('hud').style.display = 'flex'; $('pnlBadge').style.display = 'flex';
@@ -302,7 +311,7 @@
   }
 
   // ==========================================
-  // ALGORITMA RESAMPLER (PEMBUAT TIMEFRAME)
+  // TIMEFRAME AGGREGATOR
   // ==========================================
   function aggregateCandles(data, tf) {
     if (tf === 'Base') return data;
@@ -317,7 +326,6 @@
     let cur = null;
 
     data.forEach(d => {
-      // Offset +7 Jam (25200 sec) untuk zona waktu WIB (Asia/Jakarta)
       let tWib = d.time + 25200; 
       let periodStart = Math.floor(tWib / periodSec) * periodSec - 25200;
 
@@ -346,15 +354,13 @@
     let startUnix = new Date(startVal + "T00:00:00Z").getTime() / 1000;
     let endUnix = endVal ? new Date(endVal + "T23:59:59Z").getTime() / 1000 : Infinity;
 
-    // 1. Potong berdasarkan tanggal
     let dateFiltered = masterCandles.filter(c => c.time >= startUnix && c.time <= endUnix);
 
     if (dateFiltered.length === 0) {
-      toast("Tidak ada data pada tanggal tersebut!", "error");
+      toast("Tidak ada data aktif pada tanggal tersebut!", "error");
       return;
     }
 
-    // 2. Gabungkan (Resample) berdasarkan Timeframe
     let finalData = aggregateCandles(dateFiltered, currentTF);
 
     stopPlay();
@@ -369,26 +375,29 @@
     toast(`Terapkan: ${allCandles.length} Bar (${currentTF})`, 'success');
   }
 
-function resetAndRenderChart() {
-    // Muat 100 bar awal agar langsung terlihat padat dan memenuhi layar
-    visibleIdx = Math.min(100, allCandles.length); 
+  // ==========================================
+  // RENDER ENGINE & PROPORSI SCALE
+  // ==========================================
+  function resetAndRenderChart() {
+    // Tampilkan 70 bar awal agar langsung padat, terurai, dan proporsional di layar lebar
+    visibleIdx = Math.min(70, allCandles.length); 
     candleSeries.setData(allCandles.slice(0, visibleIdx));
     
     setTimeout(() => {
       const timeScale = chart.timeScale();
       timeScale.applyOptions({
-        barSpacing: 13,    // Menentukan jarak/lebar antar candle agar terurai sempurna
-        rightOffset: 12,   // Memberikan ruang kosong yang ideal di sisi kanan chart
+        barSpacing: 15,    // Mengunci lebar bodi candle agar besar dan terurai dengan sempurna
+        rightOffset: 10,   // Jarak aman di sisi kanan
       });
-      timeScale.scrollToRealTime(); // Paksa geser ke posisi candle terbaru
-    }, 50);
+      timeScale.scrollToRealTime(); 
+    }, 100);
     
     if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
     updateProgress();
   }
 
   // ==========================================
-  // REPLAY ENGINE & AUTO CLOSE (SL/TP)
+  // REPLAY EXECUTION (NEXT / PLAY)
   // ==========================================
   function nextCandle() {
     if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data habis!', 'success'); return; }
@@ -431,7 +440,7 @@ function resetAndRenderChart() {
   }
 
   // ==========================================
-  // TRADING SYSTEM
+  // TRADING EXECUTION HANDLERS
   // ==========================================
   window.openOrderModal = function(side) {
     if(!allCandles.length) return;
@@ -530,7 +539,7 @@ function resetAndRenderChart() {
   window.closeModal = function(id) { $(id).classList.remove('open'); }
 
   // ==========================================
-  // EVENT LISTENERS & UTILS
+  // ENGINE UTILITIES
   // ==========================================
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
@@ -541,7 +550,6 @@ function resetAndRenderChart() {
   $('nextBtn').addEventListener('click', nextCandle);
   $('playBtn').addEventListener('click', togglePlay);
   
-  // Setup Speed Buttons
   document.querySelectorAll('#speedSeg button').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('#speedSeg button').forEach(x => x.classList.remove('active'));
@@ -550,19 +558,17 @@ function resetAndRenderChart() {
     });
   });
 
-  // Setup TF Buttons
   document.querySelectorAll('#tfSeg button').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('#tfSeg button').forEach(x => x.classList.remove('active'));
       b.classList.add('active'); 
       currentTF = b.dataset.tf;
-      applyFilters(); // Re-calculate data
+      applyFilters(); 
     });
   });
 
   function stopPlay() { playing = false; $('playBtn').innerHTML = '▶ Play'; clearInterval(playTimer); }
 
-  // BOOTING APP
   fetchHistory();
 })();
 </script>
