@@ -281,7 +281,7 @@
           close: parseCleanNumber(cols[4]),
           rawDate: timeStr 
         };
-      }).filter(c => c.time && c.close && c.close > 0).sort((a,b) => a.time - b.time);
+      }).filter(c => c.time && c.close && c.close > 0 && c.high > c.low).sort((a,b) => a.time - b.time);
 
       if(masterCandles.length === 0) throw new Error("Dataset kosong.");
 
@@ -370,20 +370,17 @@
   }
 
 function resetAndRenderChart() {
-    // 1. Tambah jumlah bar awal agar layar lebar terisi penuh
-    visibleIdx = Math.min(150, allCandles.length); 
+    // Muat 100 bar awal agar langsung terlihat padat dan memenuhi layar
+    visibleIdx = Math.min(100, allCandles.length); 
     candleSeries.setData(allCandles.slice(0, visibleIdx));
     
-    // 2. Terapkan kerenggangan (spacing) dan paksa rata kanan
     setTimeout(() => {
       const timeScale = chart.timeScale();
       timeScale.applyOptions({
-        barSpacing: 14,    // Lebar/kerenggangan candle. Semakin besar angka ini, semakin terurai (zoom in).
-        rightOffset: 12,   // Ruang kosong secukupnya di sisi paling kanan
+        barSpacing: 13,    // Menentukan jarak/lebar antar candle agar terurai sempurna
+        rightOffset: 12,   // Memberikan ruang kosong yang ideal di sisi kanan chart
       });
-      
-      // Gulir otomatis ke candle paling akhir
-      timeScale.scrollToRealTime(); 
+      timeScale.scrollToRealTime(); // Paksa geser ke posisi candle terbaru
     }, 50);
     
     if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
