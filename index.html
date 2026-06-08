@@ -1,40 +1,15 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Backtesting Arena - Optimized</title>
-  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-  <link rel="stylesheet" href="style.css">
+    <title>Backtesting Lite</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app">
-  <div class="topbar">
-    <div class="brand"><span>Backtesting Arena</span></div>
-    <div class="status" id="statusBox">Loading...</div>
-  </div>
-  
-  <div class="chart-container">
-    <div id="chart"></div>
-    <canvas id="zoneCanvas"></canvas>
-  </div>
-
-  <div class="controls">
-    <div class="row" id="toolSeg">
-      <button data-tool="cursor" class="active">🖱️ Pointer</button>
-      <button data-tool="trend">📈 Tren</button>
-      <button data-tool="box">🟩 Kotak</button>
-      <button data-tool="fib">🧬 Fib</button>
-      <button data-tool="long">🟢 Buy</button>
-      <button data-tool="short">🔴 Sell</button>
-      <button onclick="clearAllDrawings()" style="color:red">🗑️ Clear</button>
+    <div id="chart-container">
+        <div id="chart"></div>
+        <canvas id="drawing-canvas"></canvas>
     </div>
-    <div class="row">
-      <button class="btn" id="playBtn">▶ Play</button>
-      <button class="btn" id="nextBtn">Next ▶</button>
-    </div>
-  </div>
-</div>
-<script src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
