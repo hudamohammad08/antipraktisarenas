@@ -369,26 +369,22 @@
     toast(`Terapkan: ${allCandles.length} Bar (${currentTF})`, 'success');
   }
 
-  // Perbaikan logika untuk mengatasi candle yang mengecil/eror
-  function resetAndRenderChart() {
-    visibleIdx = Math.min(60, allCandles.length); 
+function resetAndRenderChart() {
+    // 1. Tambah jumlah bar awal agar layar lebar terisi penuh
+    visibleIdx = Math.min(150, allCandles.length); 
     candleSeries.setData(allCandles.slice(0, visibleIdx));
     
-    // Mengganti scrollToRealTime dengan setVisibleLogicalRange agar ukuran candle proporsional
+    // 2. Terapkan kerenggangan (spacing) dan paksa rata kanan
     setTimeout(() => {
       const timeScale = chart.timeScale();
-      
-      // Menentukan jumlah candle yang ideal untuk tampil di layar
-      const barsToView = 50; 
-      
-      const endIndex = visibleIdx - 1; // Indeks candle paling kanan saat ini
-      const startIndex = Math.max(-0.5, endIndex - barsToView); 
-      
-      timeScale.setVisibleLogicalRange({
-        from: startIndex,
-        to: endIndex + 0.5 // Memberikan sedikit ruang kosong di sisi kanan grafik
+      timeScale.applyOptions({
+        barSpacing: 14,    // Lebar/kerenggangan candle. Semakin besar angka ini, semakin terurai (zoom in).
+        rightOffset: 12,   // Ruang kosong secukupnya di sisi paling kanan
       });
-    }, 100);
+      
+      // Gulir otomatis ke candle paling akhir
+      timeScale.scrollToRealTime(); 
+    }, 50);
     
     if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
     updateProgress();
