@@ -120,9 +120,10 @@
     <div class="row scroll">
       <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">TF</span>
       <div class="seg" id="tfSeg">
-        <button class="active">1H</button>
-        <button onclick="toast('Timeframe ini dikunci mengikuti setelan Google Sheets.', 'warn')">4H</button>
-        <button onclick="toast('Timeframe ini dikunci mengikuti setelan Google Sheets.', 'warn')">1D</button>
+        <button data-tf="Base" class="active">Base</button>
+        <button data-tf="1H">1H</button>
+        <button data-tf="4H">4H</button>
+        <button data-tf="1D">1D</button>
       </div>
 
       <span style="font-size: 10px; color: var(--muted); margin-left: 8px; margin-right: 2px;">SPEED</span>
@@ -150,17 +151,17 @@
 <div class="modal-bg" id="dateModal">
   <div class="modal">
     <h3>📅 Pilih Tanggal Replay</h3>
-    <p style="font-size: 11px; color: var(--muted); margin-top:0;">Potong data dari Database untuk mensimulasikan tanggal tertentu.</p>
+    <p style="font-size: 11px; color: var(--muted); margin-top:0;">Potong data dari Database untuk mensimulasikan rentang waktu tertentu.</p>
     
-    <label>Start Date (Mulai)</label>
+    <label>Mulai dari (Start Date)</label>
     <input type="date" id="inStartDate">
     
-    <label>End Date (Akhir - Opsional)</label>
+    <label>Sampai dengan (End Date - Opsional)</label>
     <input type="date" id="inEndDate">
     
     <div class="row-btn">
       <button class="btn ghost" onclick="closeModal('dateModal')">Cancel</button>
-      <button class="btn primary" onclick="applyDateFilter()">Apply Date</button>
+      <button class="btn primary" onclick="applyFilters()">Terapkan Data</button>
     </div>
   </div>
 </div>
@@ -202,13 +203,15 @@
   const $ = id => document.getElementById(id);
   
   // ==========================================
-  // CONFIGURATION URL GOOGLE SHEETS
+  // URL GOOGLE SHEETS
   // ==========================================
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv";
   
-  let masterCandles = []; // Data mentah asli dari Sheets
-  let allCandles = [];    // Data yang sudah dipotong berdasarkan Tanggal
+  let masterCandles = []; // Seluruh data asli dari Google Sheets
+  let allCandles = [];    // Data yang sudah difilter Tanggal & TF
   let visibleIdx = 0, speedMs = 2000, playing = false, playTimer = null;
+  let currentTF = 'Base'; 
+  
   let balance = 10000.00;
   let openTrades = []; 
   let tempOrderSide = '';
@@ -220,7 +223,12 @@
     grid: { vertLines: { color: '#1a2233' }, horzLines: { color: '#1a2233' } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     rightPriceScale: { borderColor: '#1f2a3d' },
-    timeScale: { borderColor: '#1f2a3d', timeVisible: true }
+    timeScale: { 
+      borderColor: '#1f2a3d', 
+      timeVisible: true,
+      rightOffset: 5, // Ruang lega alami di kanan
+      barSpacing: 10  // Lebar candle normal
+    }
   });
   
   const candleSeries = chart.addCandlestickSeries({ 
@@ -237,7 +245,7 @@
   });
 
   // ==========================================
-  // ROBUST NUMBER PARSER (ANTI-ERROR)
+  // ROBUST NUMBER PARSER
   // ==========================================
   function parseCleanNumber(str) {
     if (!str) return 0;
@@ -251,7 +259,7 @@
   }
 
   // ==========================================
-  // FETCH DATA
+  // FETCH DATA UTAMA
   // ==========================================
   async function fetchHistory() {
     try {
@@ -260,7 +268,7 @@
       
       const csv = await res.text();
       const rows = csv.trim().split('\n');
-      rows.shift(); // Buang header
+      rows.shift(); 
       
       masterCandles = rows.map(r => {
         const cols = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
@@ -271,24 +279,21 @@
           high: parseCleanNumber(cols[2]), 
           low: parseCleanNumber(cols[3]), 
           close: parseCleanNumber(cols[4]),
-          rawDate: timeStr // Simpan untuk referensi Date Picker
+          rawDate: timeStr 
         };
       }).filter(c => c.time && c.close && c.close > 0).sort((a,b) => a.time - b.time);
 
       if(masterCandles.length === 0) throw new Error("Dataset kosong.");
 
-      // Set batas tanggal default di UI Modal (Dari candle pertama ke terakhir)
+      // Setup Tanggal Default
       $('inStartDate').value = masterCandles[0].rawDate.split(' ')[0];
       $('inEndDate').value = masterCandles[masterCandles.length - 1].rawDate.split(' ')[0];
 
-      // Load semua data di awal
-      allCandles = [...masterCandles];
-      resetAndRenderChart();
+      applyFilters(); // Eksekusi filter & render
 
       $('loadingOverlay').style.display = 'none';
       $('hud').style.display = 'flex'; $('pnlBadge').style.display = 'flex';
       $('statusBox').className = 'status ok'; $('statusText').innerText = 'Connected';
-      toast(`Sukses memuat ${allCandles.length} Bar Data`, 'success');
     } catch(e) {
       console.error(e);
       $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Database';
@@ -297,9 +302,42 @@
   }
 
   // ==========================================
-  // FILTER TANGGAL (DATE RANGE PICKER)
+  // ALGORITMA RESAMPLER (PEMBUAT TIMEFRAME)
   // ==========================================
-  window.applyDateFilter = function() {
+  function aggregateCandles(data, tf) {
+    if (tf === 'Base') return data;
+    
+    let periodSec;
+    if (tf === '1H') periodSec = 3600;
+    else if (tf === '4H') periodSec = 14400;
+    else if (tf === '1D') periodSec = 86400;
+    else return data;
+
+    let resampled = [];
+    let cur = null;
+
+    data.forEach(d => {
+      // Offset +7 Jam (25200 sec) untuk zona waktu WIB (Asia/Jakarta)
+      let tWib = d.time + 25200; 
+      let periodStart = Math.floor(tWib / periodSec) * periodSec - 25200;
+
+      if (!cur || cur.time !== periodStart) {
+        if (cur) resampled.push(cur);
+        cur = { time: periodStart, open: d.open, high: d.high, low: d.low, close: d.close };
+      } else {
+        cur.high = Math.max(cur.high, d.high);
+        cur.low = Math.min(cur.low, d.low);
+        cur.close = d.close;
+      }
+    });
+    if (cur) resampled.push(cur);
+    return resampled;
+  }
+
+  // ==========================================
+  // FILTER ENGINE (TANGGAL & TF)
+  // ==========================================
+  window.applyFilters = function() {
     let startVal = $('inStartDate').value;
     let endVal = $('inEndDate').value;
 
@@ -308,32 +346,35 @@
     let startUnix = new Date(startVal + "T00:00:00Z").getTime() / 1000;
     let endUnix = endVal ? new Date(endVal + "T23:59:59Z").getTime() / 1000 : Infinity;
 
-    // Filter master data
-    let filtered = masterCandles.filter(c => c.time >= startUnix && c.time <= endUnix);
+    // 1. Potong berdasarkan tanggal
+    let dateFiltered = masterCandles.filter(c => c.time >= startUnix && c.time <= endUnix);
 
-    if (filtered.length === 0) {
+    if (dateFiltered.length === 0) {
       toast("Tidak ada data pada tanggal tersebut!", "error");
-    } else {
-      stopPlay();
-      // Reset Transaksi yang sedang berjalan jika tanggal diganti
-      openTrades.forEach(t => candleSeries.removePriceLine(t.lineObj));
-      openTrades = [];
-      balance = 10000.00;
-      calculateFloatingPnL(0);
-      
-      allCandles = filtered;
-      resetAndRenderChart();
-      closeModal('dateModal');
-      toast(`Data dipotong: ${allCandles.length} Bar ditemukan.`, 'success');
+      return;
     }
+
+    // 2. Gabungkan (Resample) berdasarkan Timeframe
+    let finalData = aggregateCandles(dateFiltered, currentTF);
+
+    stopPlay();
+    openTrades.forEach(t => candleSeries.removePriceLine(t.lineObj));
+    openTrades = [];
+    balance = 10000.00;
+    calculateFloatingPnL(0);
+    
+    allCandles = finalData;
+    resetAndRenderChart();
+    closeModal('dateModal');
+    toast(`Terapkan: ${allCandles.length} Bar (${currentTF})`, 'success');
   }
 
   function resetAndRenderChart() {
-    visibleIdx = Math.min(50, allCandles.length); // Tampilkan 50 candle pertama sebagai awalan
+    visibleIdx = Math.min(60, allCandles.length); 
     candleSeries.setData(allCandles.slice(0, visibleIdx));
     
-    // SMART ZOOM: Memaksa ukuran candle terlihat normal (tidak terlalu kecil)
-    chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, visibleIdx - 60), to: visibleIdx + 5 });
+    // Fitur natural scroll (tanpa dikunci)
+    setTimeout(() => { chart.timeScale().scrollToRealTime(); }, 100);
     
     if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
     updateProgress();
@@ -351,7 +392,6 @@
     updateHUD(c);
     updateProgress();
 
-    // Cek SL & TP untuk setiap order aktif (Detector)
     let closedAny = false;
     for (let i = openTrades.length - 1; i >= 0; i--) {
       let t = openTrades[i];
@@ -403,9 +443,7 @@
     let currentPx = allCandles[visibleIdx - 1].close;
     let entry = entryInput > 0 ? entryInput : currentPx;
 
-    let trade = {
-      id: Date.now(), side: tempOrderSide, lot: lot, entry: entry, sl: sl, tp: tp, lineObj: null 
-    };
+    let trade = { id: Date.now(), side: tempOrderSide, lot: lot, entry: entry, sl: sl, tp: tp, lineObj: null };
 
     trade.lineObj = candleSeries.createPriceLine({
       price: entry, color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
@@ -423,7 +461,7 @@
     let totalPnL = 0;
     openTrades.forEach(t => {
       let diff = t.side === 'BUY' ? (currentPx - t.entry) : (t.entry - currentPx);
-      t.livePnl = diff * t.lot * 100; // Multiplier Emas
+      t.livePnl = diff * t.lot * 100;
       totalPnL += t.livePnl;
     });
 
@@ -485,7 +523,7 @@
   window.closeModal = function(id) { $(id).classList.remove('open'); }
 
   // ==========================================
-  // UTILS & EVENT LISTENERS
+  // EVENT LISTENERS & UTILS
   // ==========================================
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
@@ -495,6 +533,8 @@
 
   $('nextBtn').addEventListener('click', nextCandle);
   $('playBtn').addEventListener('click', togglePlay);
+  
+  // Setup Speed Buttons
   document.querySelectorAll('#speedSeg button').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('#speedSeg button').forEach(x => x.classList.remove('active'));
@@ -502,6 +542,17 @@
       if(playing) { stopPlay(); togglePlay(); }
     });
   });
+
+  // Setup TF Buttons
+  document.querySelectorAll('#tfSeg button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#tfSeg button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active'); 
+      currentTF = b.dataset.tf;
+      applyFilters(); // Re-calculate data
+    });
+  });
+
   function stopPlay() { playing = false; $('playBtn').innerHTML = '▶ Play'; clearInterval(playTimer); }
 
   // BOOTING APP
