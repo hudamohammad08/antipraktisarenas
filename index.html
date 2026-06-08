@@ -7,7 +7,6 @@
 <title>Backtesting Max Arena — XAU/USD</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 
 <style>
@@ -33,7 +32,7 @@
   @keyframes pulse { 50% { opacity: 0.3; } }
 
   /* CHART AREA */
-  .chart-wrap { flex: 1 1 85%; position: relative; min-height: 0; background: var(--bg-0); }
+  .chart-wrap { flex: 1 1 auto; position: relative; min-height: 0; background: var(--bg-0); }
   #chart { position: absolute; inset: 0; }
   .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; background: rgba(11,15,23,0.92); z-index: 5; padding: 20px; }
   .overlay .card { max-width: 320px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
@@ -52,41 +51,42 @@
   .pnl-badge .value { font-weight: 700; font-variant-numeric: tabular-nums; }
   .pos { color: var(--green); } .neg { color: var(--red); }
 
-  /* CONTROLS */
-  .controls { flex: 0 0 auto; min-height: 15dvh; background: var(--bg-1); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+  /* BOTTOM TERMINAL PANEL */
+  .bottom-terminal { flex: 0 0 140px; background: var(--bg-1); border-top: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .term-header { background: var(--bg-2); padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
+  .term-body { flex: 1 1 auto; overflow-y: auto; }
+  .term-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+  .term-table th { padding: 5px 10px; color: var(--muted); background: rgba(0,0,0,0.1); font-weight: 500; border-bottom: 1px solid var(--line); }
+  .term-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .btn-close { background: var(--red); border: none; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; }
+
+  /* CONTROLS BAR */
+  .controls { flex: 0 0 auto; background: var(--bg-1); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
   .row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
   .row.scroll { overflow-x: auto; }
   .row.scroll::-webkit-scrollbar { display: none; }
   .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  .seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+  .seg button { background: transparent; color: var(--muted); border: 0; padding: 5px 9px; font-size: 11px; cursor: pointer; font-weight: 600; white-space: nowrap; }
   .seg button.active { background: var(--accent); color: #0b0f17; }
 
-  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.05s ease; white-space: nowrap; }
+  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.05s ease; white-space: nowrap; }
   .btn:active { transform: scale(0.97); }
   .btn.primary { background: var(--accent); color: #0b0f17; border-color: var(--accent); }
   .btn.buy { background: var(--green); color: #fff; border-color: var(--green); }
   .btn.sell { background: var(--red); color: #fff; border-color: var(--red); }
-  .btn.terminal { background: var(--blue); color: #fff; border-color: var(--blue); }
-  .btn.ghost { background: transparent; border-color: var(--line); }
   .grow { flex: 1 1 auto; }
 
   /* MODALS */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   .modal-bg.open { display: flex; }
-  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 380px; padding: 16px; }
+  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 360px; padding: 16px; }
   .modal h3 { margin: 0 0 12px; font-size: 14px; }
   .modal label { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 4px; }
   .modal input { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12px; outline: none; }
   .modal .row-btn { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-  
-  /* TERMINAL TABLE */
-  .term-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
-  .term-table th { padding: 6px; color: var(--muted); border-bottom: 1px solid var(--line); }
-  .term-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); }
-  .btn-close { background: #ef4444; border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
 
   /* TOAST */
-  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; transition: 0.3s ease; pointer-events: none; }
+  .toast { position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; transition: 0.3s ease; pointer-events: none; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
   .toast.success { border-color: var(--green); color: var(--green); }
   .toast.error { border-color: var(--red); color: var(--red); }
@@ -107,7 +107,7 @@
       <div style="color:var(--accent)" id="progressLabel"></div>
     </div>
     <div class="pnl-badge" id="pnlBadge" style="display:none;">
-      <span class="label">Balance</span><span class="value" id="balanceVal">$10,000.00</span>
+      <span class="label">Account Balance</span><span class="value" id="balanceVal">$10,000.00</span>
       <span class="label" style="margin-top:2px;">Floating P&L</span><span class="value" id="pnlVal">$0.00</span>
     </div>
 
@@ -116,14 +116,41 @@
     </div>
   </div>
 
+  <div class="bottom-terminal">
+    <div class="term-header">
+      <span>💼 TRADING TERMINAL (POSISI AKTIF)</span>
+      <span id="countPositions">0 Posisi</span>
+    </div>
+    <div class="term-body">
+      <table class="term-table">
+        <thead>
+          <tr>
+            <th>Side</th>
+            <th>Lot</th>
+            <th>Entry</th>
+            <th>Stop Loss</th>
+            <th>Take Profit</th>
+            <th>Floating PnL</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+          <tbody id="terminalBody">
+            <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Tidak ada posisi terbuka</td></tr>
+          </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="controls">
     <div class="row scroll">
-      <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">TF</span>
+      <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">TIMEFRAME</span>
       <div class="seg" id="tfSeg">
-        <button data-tf="Base" class="active">Base</button>
-        <button data-tf="1H">1H</button>
-        <button data-tf="4H">4H</button>
-        <button data-tf="1D">1D</button>
+        <button data-tf="M5">M5</button>
+        <button data-tf="M15" class="active">M15</button>
+        <button data-tf="H1">H1</button>
+        <button data-tf="H4">H4</button>
+        <button data-tf="D">D</button>
+        <button data-tf="W">W</button>
       </div>
 
       <span style="font-size: 10px; color: var(--muted); margin-left: 8px; margin-right: 2px;">SPEED</span>
@@ -134,31 +161,23 @@
         <button data-speed="50">MAX</button>
       </div>
       <div class="grow"></div>
-      <button class="btn ghost" onclick="openModal('dateModal')">📅 Date</button>
-      <button class="btn terminal" id="btnTerminal">💼 (0)</button>
+      <button class="btn ghost" onclick="openModal('dateModal')">📅 Filter Date</button>
     </div>
 
     <div class="row">
-      <button class="btn buy" onclick="openOrderModal('BUY')">BUY</button>
-      <button class="btn sell" onclick="openOrderModal('SELL')">SELL</button>
-      <div class="grow"></div>
-      <button class="btn" id="playBtn">▶ Play</button>
-      <button class="btn primary" id="nextBtn">Next ▶</button>
+      <button class="btn buy grow" onclick="openOrderModal('BUY')">EKSKUSI BUY</button>
+      <button class="btn sell grow" onclick="openOrderModal('SELL')">EKSEKUSI SELL</button>
+      <button class="btn" id="playBtn" style="min-width:90px;">▶ Play</button>
+      <button class="btn primary" id="nextBtn" style="min-width:90px;">Next ▶</button>
     </div>
   </div>
 </div>
 
 <div class="modal-bg" id="dateModal">
   <div class="modal">
-    <h3>📅 Pilih Tanggal Replay</h3>
-    <p style="font-size: 11px; color: var(--muted); margin-top:0;">Potong data dari Database untuk mensimulasikan rentang waktu tertentu.</p>
-    
-    <label>Mulai dari (Start Date)</label>
-    <input type="date" id="inStartDate">
-    
-    <label>Sampai dengan (End Date - Opsional)</label>
-    <input type="date" id="inEndDate">
-    
+    <h3>📅 Pilih Rentang Tanggal</h3>
+    <label>Mulai dari (Start Date)</label><input type="date" id="inStartDate">
+    <label>Sampai dengan (End Date)</label><input type="date" id="inEndDate">
     <div class="row-btn">
       <button class="btn ghost" onclick="closeModal('dateModal')">Cancel</button>
       <button class="btn primary" onclick="applyFilters()">Terapkan Data</button>
@@ -170,27 +189,12 @@
   <div class="modal">
     <h3 id="orderTitle">New Order</h3>
     <label>Lot Size</label><input type="number" id="inLot" value="0.10" step="0.01">
-    <label>Entry Price (Biarkan 0 untuk Market Execution)</label><input type="number" id="inEntry" value="0" step="0.1">
-    <label>Stop Loss (SL) Price</label><input type="number" id="inSl" value="0" step="0.1">
-    <label>Take Profit (TP) Price</label><input type="number" id="inTp" value="0" step="0.1">
+    <label>Entry Price (Isi 0 untuk Instant Market Execution)</label><input type="number" id="inEntry" value="0" step="0.1">
+    <label>Stop Loss (SL) Price (0 = Kosong)</label><input type="number" id="inSl" value="0" step="0.1">
+    <label>Take Profit (TP) Price (0 = Kosong)</label><input type="number" id="inTp" value="0" step="0.1">
     <div class="row-btn">
       <button class="btn ghost" onclick="closeModal('orderModal')">Cancel</button>
       <button class="btn primary" id="confirmOrderBtn">Execute Order</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-bg" id="terminalModal">
-  <div class="modal" style="max-width: 450px;">
-    <h3>💼 Terminal (Posisi Aktif)</h3>
-    <div style="overflow-y:auto; max-height:250px;">
-      <table class="term-table">
-        <thead><tr><th>Side</th><th>Lot</th><th>Entry</th><th>SL/TP</th><th>PnL</th><th>Act</th></tr></thead>
-        <tbody id="terminalBody"></tbody>
-      </table>
-    </div>
-    <div class="row-btn">
-      <button class="btn ghost" onclick="closeModal('terminalModal')">Tutup Panel</button>
     </div>
   </div>
 </div>
@@ -203,32 +207,29 @@
   const $ = id => document.getElementById(id);
   
   // ==========================================
-  // URL GOOGLE SHEETS
+  // CONFIG TELEGRAM CHANNELS & SHEET URL
   // ==========================================
+  const TELEGRAM_TOKEN = "8776331759:AAFVup_qefWDme_yz7PYUvzDcXJNlJ70yLU";
+  const TELEGRAM_CHAT_ID = "-1003742641612";
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv";
   
-  let masterCandles = []; // Seluruh data asli hasil filtrasi weekend
-  let allCandles = [];    // Data aktif running
+  let masterCandles = []; 
+  let allCandles = [];    
   let visibleIdx = 0, speedMs = 2000, playing = false, playTimer = null;
-  let currentTF = 'Base'; 
+  let currentTF = 'M15'; 
   
   let balance = 10000.00;
   let openTrades = []; 
   let tempOrderSide = '';
 
-  // CHART INITIALIZATION
+  // INITIALIZE LIGHTWEIGHT CHART
   const chart = LightweightCharts.createChart($('chart'), {
     autoSize: true, 
     layout: { background: { type: 'solid', color: '#0b0f17' }, textColor: '#8a97ad' },
     grid: { vertLines: { color: '#1a2233' }, horzLines: { color: '#1a2233' } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     rightPriceScale: { borderColor: '#1f2a3d' },
-    timeScale: { 
-      borderColor: '#1f2a3d', 
-      timeVisible: true,
-      rightOffset: 10,
-      barSpacing: 15
-    }
+    timeScale: { borderColor: '#1f2a3d', timeVisible: true, rightOffset: 12, barSpacing: 15 }
   });
   
   const candleSeries = chart.addCandlestickSeries({ 
@@ -255,19 +256,30 @@
     return isNaN(result) ? 0 : result;
   }
 
-  // ==========================================
-  // FETCH & FILTER WEEKEND DUMMY BARS
-  // ==========================================
+  // BOT TELEGRAM INTEGRATION ENGINE
+  async function pushToTelegram(msg) {
+    const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'Markdown' })
+      });
+    } catch (e) {
+      console.error("Gagal mengirim notifikasi Telegram:", e);
+    }
+  }
+
+  // READ & FILTER DATABASE
   async function fetchHistory() {
     try {
       const res = await fetch(SPREADSHEET_URL + "&t=" + new Date().getTime());
-      if (!res.ok) throw new Error("Gagal mengambil data");
+      if (!res.ok) throw new Error("Gagal mengambil database");
       
       const csv = await res.text();
       const rows = csv.trim().split('\n');
       rows.shift(); 
       
-      // 1. Parsing awal seluruh baris data
       const parsed = rows.map(r => {
         const cols = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         let timeStr = (cols[0] || '').replace(/["']/g, ''); 
@@ -283,18 +295,16 @@
 
       if(parsed.length === 0) throw new Error("Dataset kosong.");
 
-      // 2. SMART FILTER: Buang telak barisan data weekend stagnan/dummy (Sabtu & Minggu)
+      // FILTER WEEKEND BARISAN DATA MATI/DUMMY
       masterCandles = parsed.filter(c => {
         const d = new Date(c.time * 1000);
-        const day = d.getUTCDay(); // 0 = Minggu, 6 = Sabtu
+        const day = d.getUTCDay(); 
         const isWeekend = (day === 0 || day === 6);
-        const isDummyFlat = (c.high - c.low) < 0.5; // Mengeliminasi flat noise bernilai ~0.2 sewaktu market tutup
-        
+        const isDummyFlat = (c.high - c.low) < 0.5; 
         if (isWeekend && isDummyFlat) return false; 
         return true;
       });
 
-      // Setup Tanggal Default dari data bersih
       $('inStartDate').value = masterCandles[0].rawDate.split(' ')[0];
       $('inEndDate').value = masterCandles[masterCandles.length - 1].rawDate.split(' ')[0];
 
@@ -305,21 +315,20 @@
       $('statusBox').className = 'status ok'; $('statusText').innerText = 'Connected';
     } catch(e) {
       console.error(e);
-      $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Database';
-      $('loadingOverlay').innerHTML = `<div class="card"><h3 style="color:#ef4444">⚠ Error Parser</h3><p>${e.message}</p><button onclick="window.location.reload()">Refresh</button></div>`;
+      $('statusBox').className = 'status err'; $('statusText').innerText = 'Database Error';
+      $('loadingOverlay').innerHTML = `<div class="card"><h3 style="color:#ef4444">⚠ Parser Failure</h3><p>${e.message}</p><button onclick="window.location.reload()">Refresh</button></div>`;
     }
   }
 
-  // ==========================================
-  // TIMEFRAME AGGREGATOR
-  // ==========================================
+  // TIMEFRAME AGGREGATOR ENGINE (M5 - W)
   function aggregateCandles(data, tf) {
-    if (tf === 'Base') return data;
-    
     let periodSec;
-    if (tf === '1H') periodSec = 3600;
-    else if (tf === '4H') periodSec = 14400;
-    else if (tf === '1D') periodSec = 86400;
+    if (tf === 'M5') periodSec = 300;
+    else if (tf === 'M15') periodSec = 900;
+    else if (tf === 'H1') periodSec = 3600;
+    else if (tf === 'H4') periodSec = 14400;
+    else if (tf === 'D') periodSec = 86400;
+    else if (tf === 'W') periodSec = 604800;
     else return data;
 
     let resampled = [];
@@ -342,29 +351,21 @@
     return resampled;
   }
 
-  // ==========================================
-  // FILTER ENGINE (TANGGAL & TF)
-  // ==========================================
   window.applyFilters = function() {
     let startVal = $('inStartDate').value;
     let endVal = $('inEndDate').value;
-
     if (!startVal) { toast("Start Date wajib diisi!", "error"); return; }
 
     let startUnix = new Date(startVal + "T00:00:00Z").getTime() / 1000;
     let endUnix = endVal ? new Date(endVal + "T23:59:59Z").getTime() / 1000 : Infinity;
 
     let dateFiltered = masterCandles.filter(c => c.time >= startUnix && c.time <= endUnix);
-
-    if (dateFiltered.length === 0) {
-      toast("Tidak ada data aktif pada tanggal tersebut!", "error");
-      return;
-    }
+    if (dateFiltered.length === 0) { toast("Tidak ada data aktif di tanggal tersebut!", "error"); return; }
 
     let finalData = aggregateCandles(dateFiltered, currentTF);
 
     stopPlay();
-    openTrades.forEach(t => candleSeries.removePriceLine(t.lineObj));
+    openTrades.forEach(t => removeVirtualBox(t));
     openTrades = [];
     balance = 10000.00;
     calculateFloatingPnL(0);
@@ -375,32 +376,24 @@
     toast(`Terapkan: ${allCandles.length} Bar (${currentTF})`, 'success');
   }
 
-  // ==========================================
-  // RENDER ENGINE & PROPORSI SCALE
-  // ==========================================
   function resetAndRenderChart() {
-    // Tampilkan 70 bar awal agar langsung padat, terurai, dan proporsional di layar lebar
-    visibleIdx = Math.min(70, allCandles.length); 
+    visibleIdx = Math.min(80, allCandles.length); 
     candleSeries.setData(allCandles.slice(0, visibleIdx));
     
     setTimeout(() => {
       const timeScale = chart.timeScale();
-      timeScale.applyOptions({
-        barSpacing: 15,    // Mengunci lebar bodi candle agar besar dan terurai dengan sempurna
-        rightOffset: 10,   // Jarak aman di sisi kanan
-      });
+      timeScale.applyOptions({ barSpacing: 15, rightOffset: 12 });
       timeScale.scrollToRealTime(); 
     }, 100);
     
     if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
     updateProgress();
+    renderTerminal();
   }
 
-  // ==========================================
-  // REPLAY EXECUTION (NEXT / PLAY)
-  // ==========================================
+  // REPLAY CORE RUNNER
   function nextCandle() {
-    if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data habis!', 'success'); return; }
+    if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data historis habis!', 'success'); return; }
     
     const c = allCandles[visibleIdx];
     candleSeries.update(c);
@@ -415,11 +408,11 @@
       let reason = '';
 
       if (t.side === 'BUY') {
-        if (t.sl > 0 && c.low <= t.sl) { hitPrice = t.sl; reason = 'SL Hit'; }
-        else if (t.tp > 0 && c.high >= t.tp) { hitPrice = t.tp; reason = 'TP Hit'; }
+        if (t.sl > 0 && c.low <= t.sl) { hitPrice = t.sl; reason = 'STOP LOSS (SL) HIT 🔴'; }
+        else if (t.tp > 0 && c.high >= t.tp) { hitPrice = t.tp; reason = 'TAKE PROFIT (TP) HIT 🟢'; }
       } else {
-        if (t.sl > 0 && c.high >= t.sl) { hitPrice = t.sl; reason = 'SL Hit'; }
-        else if (t.tp > 0 && c.low <= t.tp) { hitPrice = t.tp; reason = 'TP Hit'; }
+        if (t.sl > 0 && c.high >= t.sl) { hitPrice = t.sl; reason = 'STOP LOSS (SL) HIT 🔴'; }
+        else if (t.tp > 0 && c.low <= t.tp) { hitPrice = t.tp; reason = 'TAKE PROFIT (TP) HIT 🟢'; }
       }
 
       if (hitPrice > 0) {
@@ -440,12 +433,45 @@
   }
 
   // ==========================================
-  // TRADING EXECUTION HANDLERS
+  // VIRTUAL BOX TRANSAKSI ON CHART PLUGINS
   // ==========================================
+  function drawVirtualBox(trade) {
+    trade.visualLines = [];
+
+    // 1. Entry Line (Biru)
+    trade.visualLines.push(candleSeries.createPriceLine({
+      price: trade.entry, color: '#3b82f6', lineWidth: 2, lineStyle: 0,
+      title: `[${trade.side} ENTRY] ${trade.lot} Lot`
+    }));
+
+    // 2. Take Profit Line (Hijau)
+    if(trade.tp > 0) {
+      trade.visualLines.push(candleSeries.createPriceLine({
+        price: trade.tp, color: '#22c55e', lineWidth: 1, lineStyle: 2,
+        title: `  └ TAKE PROFIT (TP)`
+      }));
+    }
+
+    // 3. Stop Loss Line (Merah)
+    if(trade.sl > 0) {
+      trade.visualLines.push(candleSeries.createPriceLine({
+        price: trade.sl, color: '#ef4444', lineWidth: 1, lineStyle: 2,
+        title: `  └ STOP LOSS (SL)`
+      }));
+    }
+  }
+
+  function removeVirtualBox(trade) {
+    if(trade.visualLines) {
+      trade.visualLines.forEach(line => candleSeries.removePriceLine(line));
+    }
+  }
+
+  // ORDER TRADING & TELEGRAM DISPATCHER
   window.openOrderModal = function(side) {
     if(!allCandles.length) return;
     tempOrderSide = side;
-    $('orderTitle').innerText = `New ${side} Order`;
+    $('orderTitle').innerText = `Konfirmasi Eksekusi Order ${side}`;
     $('inEntry').value = "0"; 
     $('orderModal').classList.add('open');
   }
@@ -459,18 +485,27 @@
     let currentPx = allCandles[visibleIdx - 1].close;
     let entry = entryInput > 0 ? entryInput : currentPx;
 
-    let trade = { id: Date.now(), side: tempOrderSide, lot: lot, entry: entry, sl: sl, tp: tp, lineObj: null };
+    let trade = { id: Date.now(), side: tempOrderSide, lot: lot, entry: entry, sl: sl, tp: tp, livePnl: 0, visualLines: [] };
 
-    trade.lineObj = candleSeries.createPriceLine({
-      price: entry, color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
-      lineWidth: 1, lineStyle: 2, title: `${trade.side} ${lot}L`
-    });
+    // Gambar komponen box koordinat harga pada layar chart
+    drawVirtualBox(trade);
 
     openTrades.push(trade);
     closeModal('orderModal');
     toast(`${trade.side} Executed @ ${entry.toFixed(2)}`, 'success');
+    
     calculateFloatingPnL(currentPx);
     renderTerminal();
+
+    // Kirim Log Pembukaan Posisi ke Telegram Channel Anda
+    let teleMsg = `🔔 *NEW POSITION EXECUTION*\n\n` +
+                  `• *Type:* ${trade.side}\n` +
+                  `• *Lot Size:* ${trade.lot} Lot\n` +
+                  `• *Entry Price:* ${trade.entry.toFixed(2)}\n` +
+                  `• *Stop Loss (SL):* ${trade.sl > 0 ? trade.sl.toFixed(2) : '-'}\n` +
+                  `• *Take Profit (TP):* ${trade.tp > 0 ? trade.tp.toFixed(2) : '-'}\n` +
+                  `• *Timeframe:* ${currentTF}`;
+    pushToTelegram(teleMsg);
   });
 
   function calculateFloatingPnL(currentPx) {
@@ -479,15 +514,22 @@
       let diff = t.side === 'BUY' ? (currentPx - t.entry) : (t.entry - currentPx);
       t.livePnl = diff * t.lot * 100;
       totalPnL += t.livePnl;
+      
+      // Update data realtime text cell terminal tanpa merusak render baris
+      let cell = $('pnlCell-' + t.id);
+      if(cell) {
+        cell.innerText = (t.livePnl >= 0 ? '+$' : '-$') + Math.abs(t.livePnl).toFixed(2);
+        cell.className = t.livePnl >= 0 ? 'pos' : 'neg';
+      }
     });
 
     $('balanceVal').innerText = fmtMoney(balance);
     $('pnlVal').innerText = fmtMoney(totalPnL);
     $('pnlVal').className = 'value ' + (totalPnL >= 0 ? 'pos' : 'neg');
-    $('btnTerminal').innerText = `💼 (${openTrades.length})`;
+    $('countPositions').innerText = `${openTrades.length} Posisi Aktif`;
   }
 
-  window.executeCloseTrade = function(id, forcePrice = 0, reason = 'Manual') {
+  window.executeCloseTrade = function(id, forcePrice = 0, reason = 'Closed Manual') {
     let idx = openTrades.findIndex(t => t.id === id);
     if(idx === -1) return;
     
@@ -497,50 +539,54 @@
     let realizedPnL = diff * t.lot * 100;
     
     balance += realizedPnL;
-    candleSeries.removePriceLine(t.lineObj); 
+    
+    // Hapus Virtual Box garis harga dari chart
+    removeVirtualBox(t);
     openTrades.splice(idx, 1); 
     
     calculateFloatingPnL(closePx);
     renderTerminal();
-    toast(`${t.side} Closed (${reason}) | PnL: ${fmtMoney(realizedPnL)}`, realizedPnL >= 0 ? 'success' : 'error');
+    toast(`Posisi ditutup (${reason})`, realizedPnL >= 0 ? 'success' : 'error');
+
+    // Kirim Log Penutupan Posisi/Hasil Transaksi Akhir ke Telegram Channel Anda
+    let teleMsg = `🏁 *POSITION CLOSED REPORT*\n\n` +
+                  `• *Type:* ${t.side}\n` +
+                  `• *Lot Size:* ${t.lot} Lot\n` +
+                  `• *Entry Price:* ${t.entry.toFixed(2)}\n` +
+                  `• *Closing Price:* ${closePx.toFixed(2)}\n` +
+                  `• *Reason:* ${reason}\n` +
+                  `• *Result P&L:* ${realizedPnL >= 0 ? '🟢 PROFIT' : '🔴 LOSS'} $${realizedPnL.toFixed(2)}\n` +
+                  `• *Current Balance:* $${balance.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    pushToTelegram(teleMsg);
   }
 
-  // ==========================================
-  // TERMINAL UI
-  // ==========================================
-  $('btnTerminal').addEventListener('click', () => {
-    renderTerminal();
-    $('terminalModal').classList.add('open');
-  });
-
+  // RENDER DYNAMIC TERMINAL DI BAGIAN BAWAH
   function renderTerminal() {
     let html = '';
     if (openTrades.length === 0) {
-      html = '<tr><td colspan="6" style="text-align:center; padding:15px; color:var(--muted)">Tidak ada posisi terbuka</td></tr>';
+      html = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Tidak ada posisi transaksi yang terbuka</td></tr>';
     } else {
       openTrades.forEach(t => {
         let pnlColor = t.livePnl >= 0 ? 'pos' : 'neg';
-        let slStr = t.sl > 0 ? t.sl : '-';
-        let tpStr = t.tp > 0 ? t.tp : '-';
         html += `<tr>
           <td style="color:var(--${t.side==='BUY'?'green':'red'})"><b>${t.side}</b></td>
-          <td>${t.lot}</td>
+          <td><b>${t.lot}</b></td>
           <td>${t.entry.toFixed(2)}</td>
-          <td style="font-size:9px; color:var(--muted)">S:${slStr}<br>T:${tpStr}</td>
-          <td class="${pnlColor}"><b>$${t.livePnl.toFixed(2)}</b></td>
-          <td><button class="btn-close" onclick="executeCloseTrade(${t.id})">X</button></td>
+          <td style="color:var(--red)">${t.sl > 0 ? t.sl.toFixed(2) : '-'}</td>
+          <td style="color:var(--green)">${t.tp > 0 ? t.tp.toFixed(2) : '-'}</td>
+          <td id="pnlCell-${t.id}" class="${pnlColor}"><b>${t.livePnl >= 0 ? '+$' : '-$'}${Math.abs(t.livePnl).toFixed(2)}</b></td>
+          <td><button class="btn-close" onclick="executeCloseTrade(${t.id})">Close</button></td>
         </tr>`;
       });
     }
     $('terminalBody').innerHTML = html;
+    $('countPositions').innerText = `${openTrades.length} Posisi Aktif`;
   }
 
   window.openModal = function(id) { $(id).classList.add('open'); }
   window.closeModal = function(id) { $(id).classList.remove('open'); }
 
-  // ==========================================
-  // ENGINE UTILITIES
-  // ==========================================
+  // RUNTIME HELPERS
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
   function fmtMoney(n) { return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
