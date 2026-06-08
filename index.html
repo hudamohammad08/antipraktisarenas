@@ -3,86 +3,50 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#0b0f17" />
 <title>Backtesting Max Arena — XAU/USD</title>
-
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-
 <style>
-  :root {
-    --bg-0: #0b0f17; --bg-1: #111827; --bg-2: #1a2233; --line: #1f2a3d;
-    --text: #e6edf7; --muted: #8a97ad; --accent: #f5b301;
-    --green: #22c55e; --red: #ef4444; --blue: #3b82f6; --warn: #f59e0b;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; overscroll-behavior: none; user-select: none; height: 100%; }
+  :root { --bg-0: #0b0f17; --bg-1: #111827; --bg-2: #1a2233; --line: #1f2a3d; --text: #e6edf7; --accent: #f5b301; --green: #22c55e; --red: #ef4444; --blue: #3b82f6; }
+  body { margin: 0; background: var(--bg-0); color: var(--text); font-family: -apple-system, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
   #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
-
-  /* TOP BAR */
-  .topbar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--bg-1); border-bottom: 1px solid var(--line); }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
-  .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-  .pair-tag { font-size: 11px; color: var(--accent); background: rgba(245,179,1,0.08); border: 1px solid rgba(245,179,1,0.25); padding: 2px 6px; border-radius: 4px; }
-  .status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
-  .status .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-  .status.ok .pulse { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .status.err .pulse { background: var(--red); }
-  .status.loading .pulse { background: var(--warn); animation: pulse 1s infinite; }
-  @keyframes pulse { 50% { opacity: 0.3; } }
-
-  /* CHART AREA */
-  .chart-wrap { flex: 1 1 85%; position: relative; min-height: 0; background: var(--bg-0); }
+  .chart-wrap { flex: 1; position: relative; }
   #chart { position: absolute; inset: 0; }
-  .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; background: rgba(11,15,23,0.92); z-index: 5; padding: 20px; }
-  .overlay .card { max-width: 320px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
-  .spinner { width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 10px; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* CONTROLS */
-  .controls { flex: 0 0 auto; min-height: 15dvh; background: var(--bg-1); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
-  .row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-  .row.scroll { overflow-x: auto; }
+  .controls { height: 160px; background: var(--bg-1); border-top: 1px solid var(--line); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; gap: 6px; align-items: center; }
   .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  .seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 600; }
-  .seg button.active { background: var(--accent); color: #0b0f17; }
-  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
-  .btn.primary { background: var(--accent); color: #0b0f17; }
-
-  /* MODAL */
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .seg button { background: transparent; color: var(--text); border: 0; padding: 6px 10px; font-size: 11px; cursor: pointer; }
+  .seg button.active { background: var(--accent); color: #000; }
+  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; }
+  .btn.primary { background: var(--accent); color: #000; }
+  .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 50; }
   .modal-bg.open { display: flex; }
-  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 360px; padding: 16px; }
-  .modal input { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12px; margin-bottom: 10px; }
+  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 320px; padding: 16px; }
+  .modal input { width: 100%; background: var(--bg-2); color: white; border: 1px solid var(--line); padding: 8px; margin-bottom: 10px; }
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="topbar">
-    <div class="brand"><div class="dot"></div><span>Backtesting Arena</span><span class="pair-tag">XAU/USD</span></div>
-    <div class="status loading" id="statusBox"><div class="pulse"></div><span id="statusText">Loading…</span></div>
-  </div>
-
   <div class="chart-wrap">
     <div id="chart"></div>
-    <div class="overlay" id="loadingOverlay"><div class="card"><div class="spinner"></div><h3>Loading Data</h3></div></div>
+    <div class="overlay" id="loadingOverlay"><div><h3>Loading Data...</h3><p id="loadStatus">Mencoba terhubung ke Google Sheets</p></div></div>
   </div>
-
   <div class="controls">
-    <div class="row scroll">
-      <span style="font-size:10px;color:var(--muted)">TF:</span>
+    <div class="row">
       <div class="seg" id="tfSeg">
-        <button data-tf="Base" class="active">15m</button>
+        <button data-tf="Base" class="active">Base</button>
         <button data-tf="1H">1H</button>
         <button data-tf="4H">4H</button>
         <button data-tf="1D">1D</button>
       </div>
-      <button class="btn" style="padding: 6px 10px;" onclick="openModal('dateModal')">📅 Date</button>
+      <button class="btn" style="flex:0" onclick="openModal('dateModal')">📅 Date</button>
     </div>
     <div class="row">
       <button class="btn" onclick="nextCandle()">Next ▶</button>
-      <button class="btn" onclick="nextCandle()">BUY</button>
-      <button class="btn" onclick="nextCandle()">SELL</button>
+      <button class="btn" style="background:var(--green)" onclick="nextCandle()">BUY</button>
+      <button class="btn" style="background:var(--red)" onclick="nextCandle()">SELL</button>
+      <button class="btn" style="background:var(--blue)" onclick="openModal('terminalModal')">💼 (0)</button>
     </div>
   </div>
 </div>
@@ -90,42 +54,57 @@
 <div class="modal-bg" id="dateModal">
   <div class="modal">
     <h3>Pilih Tanggal</h3>
-    <label style="font-size:10px">Mulai:</label><input type="date" id="inStartDate">
-    <label style="font-size:10px">Akhir:</label><input type="date" id="inEndDate">
+    <input type="date" id="inStartDate">
+    <input type="date" id="inEndDate">
     <button class="btn primary" style="width:100%" onclick="applyFilters()">Terapkan</button>
   </div>
+</div>
+
+<div class="modal-bg" id="terminalModal">
+  <div class="modal"><h3>Terminal</h3><button class="btn" onclick="closeModal('terminalModal')">Tutup</button></div>
 </div>
 
 <script>
 (function() {
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv";
   
-  let masterCandles = [], allCandles = [], visibleIdx = 0;
-  
-  const chart = LightweightCharts.createChart(document.getElementById('chart'), { 
-    autoSize: true, 
-    layout: { background: { type: 'solid', color: '#0b0f17' }, textColor: '#ccc' },
-    timeScale: { barSpacing: 15, rightOffset: 5 } // FIX: Menambah barSpacing
-  });
+  const chart = LightweightCharts.createChart(document.getElementById('chart'), { autoSize: true, layout: { background: { type: 'solid', color: '#0b0f17' }, textColor: '#ccc' } });
   const candleSeries = chart.addCandlestickSeries();
+  
+  let masterCandles = [], allCandles = [], visibleIdx = 0;
+
+  function parseClean(val) {
+    if (!val) return 0;
+    let s = val.toString().replace(/['"\s]/g, '');
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(/,/g, '');
+    return parseFloat(s) || 0;
+  }
 
   async function fetchHistory() {
-    const res = await fetch(SPREADSHEET_URL + "&t=" + Date.now());
-    const csv = await res.text();
-    const rows = csv.trim().split('\n'); rows.shift();
-    masterCandles = rows.map(r => {
-      const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-      return { 
-        time: Math.floor(new Date(c[0].replace(/["']/g, '').replace(' ', 'T') + 'Z').getTime() / 1000), 
-        open: parseFloat(c[1]) || 0, high: parseFloat(c[2]) || 0, low: parseFloat(c[3]) || 0, close: parseFloat(c[4]) || 0,
-        rawDate: c[0].replace(/["']/g, '').split(' ')[0]
-      };
-    }).filter(c => c.time && c.close > 0).sort((a,b) => a.time - b.time);
-    
-    $('inStartDate').value = masterCandles[0].rawDate;
-    $('inEndDate').value = masterCandles[masterCandles.length-1].rawDate;
-    applyFilters();
-    $('loadingOverlay').style.display = 'none';
+    try {
+      const res = await fetch(SPREADSHEET_URL + "&t=" + Date.now());
+      if (!res.ok) throw new Error("Gagal mengambil data dari Google Sheets");
+      const csv = await res.text();
+      const rows = csv.trim().split('\n'); rows.shift();
+      
+      masterCandles = rows.map(r => {
+        const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        return { 
+          time: Math.floor(new Date(c[0].replace(/["']/g, '').replace(' ', 'T') + 'Z').getTime() / 1000), 
+          open: parseClean(c[1]), high: parseClean(c[2]), low: parseClean(c[3]), close: parseClean(c[4]),
+          rawDate: c[0].replace(/["']/g, '').split(' ')[0]
+        };
+      }).filter(c => c.time && c.close > 0).sort((a,b) => a.time - b.time);
+      
+      $('inStartDate').value = masterCandles[0].rawDate;
+      $('inEndDate').value = masterCandles[masterCandles.length-1].rawDate;
+      
+      applyFilters();
+      document.getElementById('loadingOverlay').style.display = 'none';
+    } catch(e) {
+      document.getElementById('loadStatus').innerText = "ERROR: " + e.message;
+    }
   }
 
   window.applyFilters = function() {
@@ -138,17 +117,17 @@
       allCandles = filtered;
     } else {
       let intv = tf === '1H' ? 3600 : tf === '4H' ? 14400 : 86400;
-      let resampled = [];
+      let res = [];
       filtered.forEach(d => {
         let t = Math.floor(d.time / intv) * intv;
-        if (!resampled.length || resampled[resampled.length-1].time !== t) resampled.push({...d, time: t});
-        else { let last = resampled[resampled.length-1]; last.high = Math.max(last.high, d.high); last.low = Math.min(last.low, d.low); last.close = d.close; }
+        if (!res.length || res[res.length-1].time !== t) res.push({...d, time: t});
+        else { let last = res[res.length-1]; last.high = Math.max(last.high, d.high); last.low = Math.min(last.low, d.low); last.close = d.close; }
       });
-      allCandles = resampled;
+      allCandles = res;
     }
     visibleIdx = Math.min(60, allCandles.length);
     candleSeries.setData(allCandles.slice(0, visibleIdx));
-    document.getElementById('dateModal').classList.remove('open');
+    closeModal('dateModal');
   }
 
   window.nextCandle = function() {
@@ -166,8 +145,9 @@
     });
   });
 
-  window.openModal = id => $(id).classList.add('open');
-  window.closeModal = id => $(id).classList.remove('open');
+  window.openModal = id => document.getElementById(id).classList.add('open');
+  window.closeModal = id => document.getElementById(id).classList.remove('open');
+  const $ = id => document.getElementById(id);
 
   fetchHistory();
 })();
