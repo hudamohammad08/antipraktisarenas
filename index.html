@@ -52,12 +52,21 @@
   .pos { color: var(--green); } .neg { color: var(--red); }
 
   /* BOTTOM TERMINAL PANEL */
-  .bottom-terminal { flex: 0 0 140px; background: var(--bg-1); border-top: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .bottom-terminal { flex: 0 0 150px; background: var(--bg-1); border-top: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
   .term-header { background: var(--bg-2); padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
   .term-body { flex: 1 1 auto; overflow-y: auto; }
   .term-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
   .term-table th { padding: 5px 10px; color: var(--muted); background: rgba(0,0,0,0.1); font-weight: 500; border-bottom: 1px solid var(--line); }
   .term-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  
+  /* ACTION BUTTONS */
+  .action-group { display: flex; gap: 4px; }
+  .btn-micro { background: var(--bg-2); border: 1px solid var(--line); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; transition: 0.1s; }
+  .btn-micro:active { transform: scale(0.95); }
+  .btn-micro.be { color: var(--blue); border-color: var(--blue); }
+  .btn-micro.be:hover { background: rgba(59,130,246,0.1); }
+  .btn-micro.part { color: var(--warn); border-color: var(--warn); }
+  .btn-micro.part:hover { background: rgba(245,158,11,0.1); }
   .btn-close { background: var(--red); border: none; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; }
 
   /* CONTROLS BAR */
@@ -74,6 +83,7 @@
   .btn.primary { background: var(--accent); color: #0b0f17; border-color: var(--accent); }
   .btn.buy { background: var(--green); color: #fff; border-color: var(--green); }
   .btn.sell { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn.stats { background: #3b82f6; color: #fff; border-color: #3b82f6; }
   .grow { flex: 1 1 auto; }
 
   /* MODALS */
@@ -85,8 +95,16 @@
   .modal input { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12px; outline: none; }
   .modal .row-btn { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 
+  /* STATS GRID */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+  .stat-box { background: var(--bg-2); border: 1px solid var(--line); padding: 10px; border-radius: 8px; text-align: center; }
+  .stat-box .title { font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+  .stat-box .val { font-size: 14px; font-weight: 700; color: var(--text); }
+  .stat-box .val.pos { color: var(--green); }
+  .stat-box .val.neg { color: var(--red); }
+
   /* TOAST */
-  .toast { position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; transition: 0.3s ease; pointer-events: none; }
+  .toast { position: fixed; bottom: 230px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 60; opacity: 0; transition: 0.3s ease; pointer-events: none; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
   .toast.success { border-color: var(--green); color: var(--green); }
   .toast.error { border-color: var(--red); color: var(--red); }
@@ -128,8 +146,8 @@
             <th>Side</th>
             <th>Lot</th>
             <th>Entry</th>
-            <th>Stop Loss</th>
-            <th>Take Profit</th>
+            <th>SL</th>
+            <th>TP</th>
             <th>Floating PnL</th>
             <th>Action</th>
           </tr>
@@ -162,6 +180,7 @@
       </div>
       <div class="grow"></div>
       <button class="btn ghost" onclick="openModal('dateModal')">📅 Filter Date</button>
+      <button class="btn stats" onclick="openStatsModal()">📊 Stats</button>
     </div>
 
     <div class="row">
@@ -199,6 +218,44 @@
   </div>
 </div>
 
+<div class="modal-bg" id="statsModal">
+  <div class="modal" style="max-width: 400px;">
+    <h3>📊 Jurnal Performa Trading</h3>
+    <p style="font-size:11px; color:var(--muted); margin-top:0;">Evaluasi hasil eksekusi strategi Anda selama pengujian.</p>
+    
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="title">Win Rate</div>
+        <div class="val" id="statWR">0%</div>
+      </div>
+      <div class="stat-box">
+        <div class="title">Profit Factor</div>
+        <div class="val" id="statPF">0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="title">Net Profit</div>
+        <div class="val" id="statNet">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="title">Total Trades</div>
+        <div class="val" id="statTotal">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="title">Max Drawdown</div>
+        <div class="val neg" id="statDD">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="title">Win / Loss</div>
+        <div class="val" style="color:var(--muted)"><span class="pos" id="statW">0</span> / <span class="neg" id="statL">0</span></div>
+      </div>
+    </div>
+
+    <div class="row-btn" style="margin-top: 20px;">
+      <button class="btn ghost" onclick="closeModal('statsModal')">Tutup Jurnal</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -218,9 +275,13 @@
   let visibleIdx = 0, speedMs = 2000, playing = false, playTimer = null;
   let currentTF = 'M15'; 
   
-  let balance = 10000.00;
+  const INITIAL_BALANCE = 10000.00;
+  let balance = INITIAL_BALANCE;
   let openTrades = []; 
   let tempOrderSide = '';
+
+  // STATE JURNAL PERFORMA (FITUR 1)
+  let tStats = { total: 0, win: 0, loss: 0, grossProfit: 0, grossLoss: 0, peakBalance: INITIAL_BALANCE, maxDrawdown: 0 };
 
   // INITIALIZE LIGHTWEIGHT CHART
   const chart = LightweightCharts.createChart($('chart'), {
@@ -260,14 +321,8 @@
   async function pushToTelegram(msg) {
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
     try {
-      await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'Markdown' })
-      });
-    } catch (e) {
-      console.error("Gagal mengirim notifikasi Telegram:", e);
-    }
+      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'HTML' }) });
+    } catch (e) { console.error("Gagal terhubung ke Telegram API:", e); }
   }
 
   // READ & FILTER DATABASE
@@ -295,7 +350,6 @@
 
       if(parsed.length === 0) throw new Error("Dataset kosong.");
 
-      // FILTER WEEKEND BARISAN DATA MATI/DUMMY
       masterCandles = parsed.filter(c => {
         const d = new Date(c.time * 1000);
         const day = d.getUTCDay(); 
@@ -320,7 +374,7 @@
     }
   }
 
-  // TIMEFRAME AGGREGATOR ENGINE (M5 - W)
+  // TIMEFRAME AGGREGATOR
   function aggregateCandles(data, tf) {
     let periodSec;
     if (tf === 'M5') periodSec = 300;
@@ -367,7 +421,8 @@
     stopPlay();
     openTrades.forEach(t => removeVirtualBox(t));
     openTrades = [];
-    balance = 10000.00;
+    balance = INITIAL_BALANCE;
+    tStats = { total: 0, win: 0, loss: 0, grossProfit: 0, grossLoss: 0, peakBalance: INITIAL_BALANCE, maxDrawdown: 0 }; // Reset Stats
     calculateFloatingPnL(0);
     
     allCandles = finalData;
@@ -432,31 +487,26 @@
     else clearInterval(playTimer);
   }
 
-  // ==========================================
   // VIRTUAL BOX TRANSAKSI ON CHART PLUGINS
-  // ==========================================
   function drawVirtualBox(trade) {
     trade.visualLines = [];
 
-    // 1. Entry Line (Biru)
     trade.visualLines.push(candleSeries.createPriceLine({
       price: trade.entry, color: '#3b82f6', lineWidth: 2, lineStyle: 0,
       title: `[${trade.side} ENTRY] ${trade.lot} Lot`
     }));
 
-    // 2. Take Profit Line (Hijau)
     if(trade.tp > 0) {
       trade.visualLines.push(candleSeries.createPriceLine({
         price: trade.tp, color: '#22c55e', lineWidth: 1, lineStyle: 2,
-        title: `  └ TAKE PROFIT (TP)`
+        title: `  └ TP`
       }));
     }
 
-    // 3. Stop Loss Line (Merah)
     if(trade.sl > 0) {
       trade.visualLines.push(candleSeries.createPriceLine({
         price: trade.sl, color: '#ef4444', lineWidth: 1, lineStyle: 2,
-        title: `  └ STOP LOSS (SL)`
+        title: `  └ SL`
       }));
     }
   }
@@ -467,7 +517,7 @@
     }
   }
 
-  // ORDER TRADING & TELEGRAM DISPATCHER
+  // ORDER TRADING EXECUTION
   window.openOrderModal = function(side) {
     if(!allCandles.length) return;
     tempOrderSide = side;
@@ -487,9 +537,7 @@
 
     let trade = { id: Date.now(), side: tempOrderSide, lot: lot, entry: entry, sl: sl, tp: tp, livePnl: 0, visualLines: [] };
 
-    // Gambar komponen box koordinat harga pada layar chart
     drawVirtualBox(trade);
-
     openTrades.push(trade);
     closeModal('orderModal');
     toast(`${trade.side} Executed @ ${entry.toFixed(2)}`, 'success');
@@ -497,14 +545,13 @@
     calculateFloatingPnL(currentPx);
     renderTerminal();
 
-    // Kirim Log Pembukaan Posisi ke Telegram Channel Anda
-    let teleMsg = `🔔 *NEW POSITION EXECUTION*\n\n` +
-                  `• *Type:* ${trade.side}\n` +
-                  `• *Lot Size:* ${trade.lot} Lot\n` +
-                  `• *Entry Price:* ${trade.entry.toFixed(2)}\n` +
-                  `• *Stop Loss (SL):* ${trade.sl > 0 ? trade.sl.toFixed(2) : '-'}\n` +
-                  `• *Take Profit (TP):* ${trade.tp > 0 ? trade.tp.toFixed(2) : '-'}\n` +
-                  `• *Timeframe:* ${currentTF}`;
+    let teleMsg = `🔔 <b>NEW POSITION EXECUTION</b>\n\n` +
+                  `• <b>Type:</b> ${trade.side}\n` +
+                  `• <b>Lot Size:</b> ${trade.lot} Lot\n` +
+                  `• <b>Entry Price:</b> ${trade.entry.toFixed(2)}\n` +
+                  `• <b>Stop Loss (SL):</b> ${trade.sl > 0 ? trade.sl.toFixed(2) : '-'}\n` +
+                  `• <b>Take Profit (TP):</b> ${trade.tp > 0 ? trade.tp.toFixed(2) : '-'}\n` +
+                  `• <b>Timeframe:</b> ${currentTF}`;
     pushToTelegram(teleMsg);
   });
 
@@ -515,7 +562,6 @@
       t.livePnl = diff * t.lot * 100;
       totalPnL += t.livePnl;
       
-      // Update data realtime text cell terminal tanpa merusak render baris
       let cell = $('pnlCell-' + t.id);
       if(cell) {
         cell.innerText = (t.livePnl >= 0 ? '+$' : '-$') + Math.abs(t.livePnl).toFixed(2);
@@ -529,6 +575,56 @@
     $('countPositions').innerText = `${openTrades.length} Posisi Aktif`;
   }
 
+  // FITUR 2: BREAK EVEN (BE)
+  window.setBreakEven = function(id) {
+    let t = openTrades.find(x => x.id === id);
+    if(t) {
+      t.sl = t.entry; // Pindahkan SL ke titik Entry
+      removeVirtualBox(t);
+      drawVirtualBox(t);
+      renderTerminal();
+      toast('Break Even (BE) Diaktifkan. SL -> Entry', 'success');
+    }
+  }
+
+  // FITUR 2: PARTIAL CLOSE (50%)
+  window.partialClose = function(id) {
+    let t = openTrades.find(x => x.id === id);
+    if(t && t.lot >= 0.02) {
+      let closedLot = parseFloat((t.lot / 2).toFixed(2));
+      let remainLot = parseFloat((t.lot - closedLot).toFixed(2));
+      
+      let closePx = allCandles[visibleIdx - 1].close;
+      let diff = t.side === 'BUY' ? (closePx - t.entry) : (t.entry - closePx);
+      let realizedPnL = diff * closedLot * 100;
+      
+      balance += realizedPnL; // Update balance utama
+      t.lot = remainLot;      // Update lot yang masih running
+      
+      // Update Jurnal Stats untuk profit yang diamankan
+      if(realizedPnL >= 0) tStats.grossProfit += realizedPnL;
+      else tStats.grossLoss += Math.abs(realizedPnL);
+      tStats.peakBalance = Math.max(tStats.peakBalance, balance);
+      
+      calculateFloatingPnL(closePx);
+      removeVirtualBox(t);
+      drawVirtualBox(t); // Gambar ulang box untuk memperbarui label lot size
+      renderTerminal();
+      toast(`Partial Close 50% (${closedLot} Lot) Sukses`, realizedPnL >= 0 ? 'success' : 'error');
+
+      let teleMsg = `✂️ <b>PARTIAL CLOSE (50% DIAMANKAN)</b>\n\n` +
+                    `• <b>Type:</b> ${t.side}\n` +
+                    `• <b>Lot Ditutup:</b> ${closedLot} Lot\n` +
+                    `• <b>Sisa Lot Aktif:</b> ${remainLot} Lot\n` +
+                    `• <b>Profit Diamankan:</b> ${realizedPnL >= 0 ? '🟢' : '🔴'} $${realizedPnL.toFixed(2)}\n` +
+                    `• <b>Current Balance:</b> $${balance.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+      pushToTelegram(teleMsg);
+    } else {
+      toast('Lot terlalu kecil untuk di-Partial Close (Min 0.02 Lot)', 'error');
+    }
+  }
+
+  // FITUR 1: UPDATE JURNAL PERFORMA SAAT TRADE DITUTUP
   window.executeCloseTrade = function(id, forcePrice = 0, reason = 'Closed Manual') {
     let idx = openTrades.findIndex(t => t.id === id);
     if(idx === -1) return;
@@ -540,7 +636,16 @@
     
     balance += realizedPnL;
     
-    // Hapus Virtual Box garis harga dari chart
+    // -- PENCATATAN STATISTIK --
+    tStats.total++;
+    if (realizedPnL >= 0) { tStats.win++; tStats.grossProfit += realizedPnL; } 
+    else { tStats.loss++; tStats.grossLoss += Math.abs(realizedPnL); }
+    
+    tStats.peakBalance = Math.max(tStats.peakBalance, balance);
+    let currentDrawdown = tStats.peakBalance - balance;
+    tStats.maxDrawdown = Math.max(tStats.maxDrawdown, currentDrawdown);
+    // --------------------------
+
     removeVirtualBox(t);
     openTrades.splice(idx, 1); 
     
@@ -548,19 +653,40 @@
     renderTerminal();
     toast(`Posisi ditutup (${reason})`, realizedPnL >= 0 ? 'success' : 'error');
 
-    // Kirim Log Penutupan Posisi/Hasil Transaksi Akhir ke Telegram Channel Anda
-    let teleMsg = `🏁 *POSITION CLOSED REPORT*\n\n` +
-                  `• *Type:* ${t.side}\n` +
-                  `• *Lot Size:* ${t.lot} Lot\n` +
-                  `• *Entry Price:* ${t.entry.toFixed(2)}\n` +
-                  `• *Closing Price:* ${closePx.toFixed(2)}\n` +
-                  `• *Reason:* ${reason}\n` +
-                  `• *Result P&L:* ${realizedPnL >= 0 ? '🟢 PROFIT' : '🔴 LOSS'} $${realizedPnL.toFixed(2)}\n` +
-                  `• *Current Balance:* $${balance.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    let teleMsg = `🏁 <b>POSITION CLOSED REPORT</b>\n\n` +
+                  `• <b>Type:</b> ${t.side}\n` +
+                  `• <b>Lot Size:</b> ${t.lot} Lot\n` +
+                  `• <b>Entry Price:</b> ${t.entry.toFixed(2)}\n` +
+                  `• <b>Closing Price:</b> ${closePx.toFixed(2)}\n` +
+                  `• <b>Reason:</b> ${reason}\n` +
+                  `• <b>Result P&L:</b> ${realizedPnL >= 0 ? '🟢 PROFIT' : '🔴 LOSS'} $${realizedPnL.toFixed(2)}\n` +
+                  `• <b>Current Balance:</b> $${balance.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
     pushToTelegram(teleMsg);
   }
 
-  // RENDER DYNAMIC TERMINAL DI BAGIAN BAWAH
+  // FITUR 1: MENAMPILKAN MODAL JURNAL PERFORMA
+  window.openStatsModal = function() {
+    let winRate = tStats.total > 0 ? ((tStats.win / tStats.total) * 100).toFixed(1) : 0;
+    let profitFactor = tStats.grossLoss > 0 ? (tStats.grossProfit / tStats.grossLoss).toFixed(2) : (tStats.grossProfit > 0 ? 'MAX' : '0.00');
+    let netProfit = tStats.grossProfit - tStats.grossLoss;
+
+    $('statWR').innerText = `${winRate}%`;
+    $('statWR').className = winRate >= 50 ? 'val pos' : 'val neg';
+    
+    $('statPF').innerText = profitFactor;
+    $('statPF').className = profitFactor >= 1 ? 'val pos' : 'val neg';
+    
+    $('statNet').innerText = fmtMoney(netProfit);
+    $('statNet').className = netProfit >= 0 ? 'val pos' : 'val neg';
+    
+    $('statTotal').innerText = tStats.total;
+    $('statDD').innerText = `-$${tStats.maxDrawdown.toFixed(2)}`;
+    $('statW').innerText = tStats.win;
+    $('statL').innerText = tStats.loss;
+
+    openModal('statsModal');
+  }
+
   function renderTerminal() {
     let html = '';
     if (openTrades.length === 0) {
@@ -568,14 +694,23 @@
     } else {
       openTrades.forEach(t => {
         let pnlColor = t.livePnl >= 0 ? 'pos' : 'neg';
+        let slStr = t.sl > 0 ? t.sl.toFixed(2) : '-';
+        let tpStr = t.tp > 0 ? t.tp.toFixed(2) : '-';
+        
         html += `<tr>
           <td style="color:var(--${t.side==='BUY'?'green':'red'})"><b>${t.side}</b></td>
           <td><b>${t.lot}</b></td>
           <td>${t.entry.toFixed(2)}</td>
-          <td style="color:var(--red)">${t.sl > 0 ? t.sl.toFixed(2) : '-'}</td>
-          <td style="color:var(--green)">${t.tp > 0 ? t.tp.toFixed(2) : '-'}</td>
+          <td style="color:var(--red)">${slStr}</td>
+          <td style="color:var(--green)">${tpStr}</td>
           <td id="pnlCell-${t.id}" class="${pnlColor}"><b>${t.livePnl >= 0 ? '+$' : '-$'}${Math.abs(t.livePnl).toFixed(2)}</b></td>
-          <td><button class="btn-close" onclick="executeCloseTrade(${t.id})">Close</button></td>
+          <td>
+            <div class="action-group">
+              <button title="Break Even (Pindah SL ke Entry)" class="btn-micro be" onclick="setBreakEven(${t.id})">BE</button>
+              <button title="Partial Close (Tutup 50% Lot)" class="btn-micro part" onclick="partialClose(${t.id})">50%</button>
+              <button title="Tutup Posisi Secara Penuh" class="btn-close" onclick="executeCloseTrade(${t.id})">Close</button>
+            </div>
+          </td>
         </tr>`;
       });
     }
@@ -586,7 +721,6 @@
   window.openModal = function(id) { $(id).classList.add('open'); }
   window.closeModal = function(id) { $(id).classList.remove('open'); }
 
-  // RUNTIME HELPERS
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
   function fmtMoney(n) { return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
