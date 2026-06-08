@@ -194,7 +194,7 @@
     }
   });
 
-  // FETCH DATA DARI GOOGLE SHEETS
+// FETCH DATA DARI GOOGLE SHEETS (DENGAN CSV PARSER ANTI-ERROR)
   async function fetchHistory() {
     try {
       const res = await fetch(SPREADSHEET_URL + "&t=" + new Date().getTime());
@@ -203,8 +203,20 @@
       rows.shift(); // Buang header
       
       allCandles = rows.map(r => {
-        const c = r.split(',');
-        return { time: Math.floor(new Date((c[0]||'').replace(' ','T')+'Z').getTime()/1000), open: parseFloat(c[1]), high: parseFloat(c[2]), low: parseFloat(c[3]), close: parseFloat(c[4]) };
+        // Regex Sakti: Memotong berdasarkan koma, TAPI mengabaikan koma di dalam tanda kutip
+        const cols = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        
+        // Pembersih Angka: Menghapus tanda kutip dan koma ribuan (hanya menyisakan angka & titik desimal)
+        const cleanNum = (val) => parseFloat((val || '0').replace(/[^0-9.-]/g, ''));
+        
+        return { 
+          // Hapus kutip pada tanggal jika ada
+          time: Math.floor(new Date((cols[0] || '').replace(/["']/g, '').replace(' ', 'T') + 'Z').getTime() / 1000), 
+          open: cleanNum(cols[1]), 
+          high: cleanNum(cols[2]), 
+          low: cleanNum(cols[3]), 
+          close: cleanNum(cols[4]) 
+        };
       }).filter(c => c.time && c.close).sort((a,b) => a.time - b.time);
 
       visibleIdx = Math.min(50, allCandles.length - 1);
@@ -216,11 +228,12 @@
       updateHUD(allCandles[visibleIdx - 1]);
       updateProgress();
     } catch(e) {
+      console.error(e);
       $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Database';
-      toast("Gagal memuat data", "error");
+      toast("Gagal memuat atau memproses data", "error");
     }
   }
-
+  
   // REPLAY ENGINE & AUTO-CLOSE (SL/TP)
   function nextCandle() {
     if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data habis!', 'success'); return; }
