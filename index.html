@@ -106,7 +106,9 @@
 
   <div class="chart-wrap">
     <div id="chart"></div>
-    <canvas id="drawingCanvas"></canvas> <div class="hud" id="hud" style="display:none;">
+    <canvas id="drawingCanvas"></canvas>
+    
+    <div class="hud" id="hud" style="display:none;">
       <div class="ohlc" id="ohlc"></div>
       <div style="color:var(--accent)" id="progressLabel"></div>
     </div>
@@ -214,9 +216,6 @@
   'use strict';
   const $ = id => document.getElementById(id);
   
-  // ==========================================
-  // URL GOOGLE SHEETS
-  // ==========================================
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv";
   
   let masterCandles = []; 
@@ -228,7 +227,7 @@
   let openTrades = []; 
   let tempOrderSide = '';
 
-  // STATE DRAWING SYSTEM
+  // STATE DRAWING ENGINE
   let currentTool = 'NONE'; 
   let savedDrawings = [];  
   let isDrawing = false;
@@ -238,7 +237,7 @@
   const dCanvas = $('drawingCanvas');
   const ctx = dCanvas.getContext('2d');
 
-  // CHART INITIALIZATION
+  // INITIALIZE LIGHTWEIGHT CHART
   const chart = LightweightCharts.createChart($('chart'), {
     autoSize: true, 
     layout: { background: { type: 'solid', color: '#0b0f17' }, textColor: '#8a97ad' },
@@ -261,18 +260,17 @@
     }
   });
 
-  // Sinkronisasi Ukuran Canvas Overlay dengan Ukuran Chart
   function resizeOverlayCanvas() {
     const container = $('chart');
     dCanvas.width = container.clientWidth;
     dCanvas.height = container.clientHeight;
     redrawAllZones();
   }
+  
   window.addEventListener('resize', resizeOverlayCanvas);
   chart.timeScale().subscribeVisibleTimeRangeChange(redrawAllZones);
-  chart.priceScale('right').subscribeVisiblePriceRangeChange(redrawAllZones);
+  // FIX: Menggabungkan deteksi render vertikal dan horizontal murni pada event timeScale agar terhindar dari TypeError v4
 
-  // CONFIG WARNA DAN LABELLING UNTUK SMC/ICT ZONES
   const ZONE_CONFIGS = {
     SUPPLY:  { fill: 'rgba(239, 68, 68, 0.15)', stroke: '#ef4444', width: 1, label: 'SUPPLY ZONE' },
     OB_BEAR: { fill: 'rgba(153, 27, 27, 0.3)',   stroke: '#ef4444', width: 2, label: '🪓 OB BEARISH' },
@@ -281,7 +279,6 @@
     FVG:     { fill: 'rgba(245, 158, 11, 0.18)', stroke: '#f59e0b', width: 1, label: '⚠️ FVG ZONE' }
   };
 
-  // LOGIKA UTAMA SINKRONISASI COORD CANVAS -> VALUE HARGA & WAKTU CHART
   function redrawAllZones() {
     ctx.clearRect(0, 0, dCanvas.width, dCanvas.height);
     const timeScale = chart.timeScale();
@@ -295,24 +292,18 @@
 
       if (x1 !== null && x2 !== null && y1 !== null && y2 !== null) {
         const conf = ZONE_CONFIGS[zone.type];
-        
-        // Draw Area Box
         ctx.fillStyle = conf.fill;
         ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
-        
-        // Draw Border
         ctx.strokeStyle = conf.stroke;
         ctx.lineWidth = conf.width;
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
 
-        // Draw Label tag text
         ctx.fillStyle = conf.stroke;
         ctx.font = 'bold 9px sans-serif';
         ctx.fillText(conf.label, x1 + 5, y1 + 12);
       }
     });
 
-    // Menggambar kotak preview saat melakukan drag mouse/touch
     if (isDrawing && drawStartPoint && drawEndPoint && currentTool !== 'NONE') {
       const conf = ZONE_CONFIGS[currentTool];
       ctx.fillStyle = conf.fill;
@@ -323,7 +314,7 @@
     }
   }
 
-  // INTERAKSI MOUSE/SENTUHAN PADA LAYER CANVAS OVERLAY
+  // DESKTOP INTERACT (MOUSE)
   dCanvas.addEventListener('mousedown', (e) => {
     if (currentTool === 'NONE') return;
     const rect = dCanvas.getBoundingClientRect();
@@ -339,7 +330,7 @@
     redrawAllZones();
   });
 
-  dCanvas.addEventListener('mouseup', () => {
+  const handleDrawEnd = () => {
     if (!isDrawing) return;
     isDrawing = false;
 
@@ -353,22 +344,37 @@
 
     if (t1 && t2 && p1 && p2 && currentTool !== 'NONE') {
       savedDrawings.push({
-        id: Date.now(),
-        type: currentTool,
-        startTime: t1,
-        endTime: t2,
-        startPrice: p1,
-        endPrice: p2
+        id: Date.now(), type: currentTool, startTime: t1, endTime: t2, startPrice: p1, endPrice: p2
       });
-      toast(`Zona ${currentTool} berhasil digambar!`, 'success');
+      toast(`Zona ${currentTool} berhasil disimpan!`, 'success');
     }
-    
-    drawStartPoint = null;
-    drawEndPoint = null;
+    drawStartPoint = null; drawEndPoint = null;
     redrawAllZones();
-  });
+  };
 
-  // ATUR TOOL AKTIF MENGGAMBAR
+  dCanvas.addEventListener('mouseup', handleDrawEnd);
+
+  // MOBILE INTERACT (TELEGRAM DEVICE TOUCH LISTENERS)
+  dCanvas.addEventListener('touchstart', (e) => {
+    if (currentTool === 'NONE') return;
+    e.preventDefault();
+    const rect = dCanvas.getBoundingClientRect();
+    isDrawing = true;
+    drawStartPoint = { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    drawEndPoint = { ...drawStartPoint };
+  }, { passive: false });
+
+  dCanvas.addEventListener('touchmove', (e) => {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const rect = dCanvas.getBoundingClientRect();
+    drawEndPoint = { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    redrawAllZones();
+  }, { passive: false });
+
+  dCanvas.addEventListener('touchend', handleDrawEnd);
+
+  // CONTROLLING DRAW BAR ACTION BUTTONS
   document.querySelectorAll('#drawSeg button').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#drawSeg button').forEach(b => b.className = '');
@@ -381,20 +387,16 @@
       } else {
         dCanvas.classList.add('active-draw');
         btn.classList.add('draw-active');
-        toast(`Mode Gambar: Tarik kursor di chart untuk area ${currentTool}`, 'success');
+        toast(`Tarik area untuk menggambar ${currentTool}`, 'success');
       }
     });
   });
 
   window.clearAllDrawings = function() {
-    savedDrawings = [];
-    redrawAllZones();
+    savedDrawings = []; redrawAllZones();
     toast('Semua zona gambar dibersihkan!', 'error');
   };
 
-  // ==========================================
-  // ROBUST NUMBER PARSER
-  // ==========================================
   function parseCleanNumber(str) {
     if (!str) return 0;
     let s = str.toString().replace(/['"\s]/g, '');
@@ -406,9 +408,6 @@
     return isNaN(result) ? 0 : result;
   }
 
-  // ==========================================
-  // FETCH DATA UTAMA
-  // ==========================================
   async function fetchHistory() {
     try {
       const res = await fetch(SPREADSHEET_URL + "&t=" + new Date().getTime());
@@ -449,21 +448,12 @@
     }
   }
 
-  // ==========================================
-  // ALGORITMA RESAMPLER (PEMBUAT TIMEFRAME)
-  // ==========================================
   function aggregateCandles(data, tf) {
     if (tf === 'Base') return data;
-    
-    let periodSec;
-    if (tf === '1H') periodSec = 3600;
-    else if (tf === '4H') periodSec = 14400;
-    else if (tf === '1D') periodSec = 86400;
-    else return data;
+    let periodSec = tf === '1H' ? 3600 : tf === '4H' ? 14400 : tf === '1D' ? 86400 : 0;
+    if (periodSec === 0) return data;
 
-    let resampled = [];
-    let cur = null;
-
+    let resampled = [], cur = null;
     data.forEach(d => {
       let tWib = d.time + 25200; 
       let periodStart = Math.floor(tWib / periodSec) * periodSec - 25200;
@@ -481,32 +471,21 @@
     return resampled;
   }
 
-  // ==========================================
-  // FILTER ENGINE (TANGGAL & TF)
-  // ==========================================
   window.applyFilters = function() {
     let startVal = $('inStartDate').value;
     let endVal = $('inEndDate').value;
-
     if (!startVal) { toast("Start Date wajib diisi!", "error"); return; }
 
     let startUnix = new Date(startVal + "T00:00:00Z").getTime() / 1000;
     let endUnix = endVal ? new Date(endVal + "T23:59:59Z").getTime() / 1000 : Infinity;
-
     let dateFiltered = masterCandles.filter(c => c.time >= startUnix && c.time <= endUnix);
 
-    if (dateFiltered.length === 0) {
-      toast("Tidak ada data pada tanggal tersebut!", "error");
-      return;
-    }
-
+    if (dateFiltered.length === 0) { toast("Tidak ada data pada tanggal tersebut!", "error"); return; }
     let finalData = aggregateCandles(dateFiltered, currentTF);
 
     stopPlay();
     openTrades.forEach(t => candleSeries.removePriceLine(t.lineObj));
-    openTrades = [];
-    balance = 10000.00;
-    calculateFloatingPnL(0);
+    openTrades = []; balance = 10000.00; calculateFloatingPnL(0);
     
     allCandles = finalData;
     resetAndRenderChart();
@@ -517,35 +496,21 @@
   function resetAndRenderChart() {
     visibleIdx = Math.min(60, allCandles.length); 
     candleSeries.setData(allCandles.slice(0, visibleIdx));
-    
-    setTimeout(() => { 
-      chart.timeScale().scrollToRealTime(); 
-      redrawAllZones();
-    }, 100);
-    
+    setTimeout(() => { chart.timeScale().scrollToRealTime(); redrawAllZones(); }, 100);
     if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
     updateProgress();
   }
 
-  // ==========================================
-  // REPLAY ENGINE & AUTO CLOSE (SL/TP)
-  // ==========================================
   function nextCandle() {
     if (visibleIdx >= allCandles.length) { stopPlay(); toast('Data habis!', 'success'); return; }
-    
     const c = allCandles[visibleIdx];
     candleSeries.update(c);
     visibleIdx++;
-    updateHUD(c);
-    updateProgress();
-    redrawAllZones();
+    updateHUD(c); updateProgress(); redrawAllZones();
 
     let closedAny = false;
     for (let i = openTrades.length - 1; i >= 0; i--) {
-      let t = openTrades[i];
-      let hitPrice = 0;
-      let reason = '';
-
+      let t = openTrades[i], hitPrice = 0, reason = '';
       if (t.side === 'BUY') {
         if (t.sl > 0 && c.low <= t.sl) { hitPrice = t.sl; reason = 'SL Hit'; }
         else if (t.tp > 0 && c.high >= t.tp) { hitPrice = t.tp; reason = 'TP Hit'; }
@@ -553,13 +518,8 @@
         if (t.sl > 0 && c.high >= t.sl) { hitPrice = t.sl; reason = 'SL Hit'; }
         else if (t.tp > 0 && c.low <= t.tp) { hitPrice = t.tp; reason = 'TP Hit'; }
       }
-
-      if (hitPrice > 0) {
-        executeCloseTrade(t.id, hitPrice, reason);
-        closedAny = true;
-      }
+      if (hitPrice > 0) { executeCloseTrade(t.id, hitPrice, reason); closedAny = true; }
     }
-
     calculateFloatingPnL(c.close);
     if(closedAny) renderTerminal();
   }
@@ -571,9 +531,6 @@
     else clearInterval(playTimer);
   }
 
-  // ==========================================
-  // TRADING SYSTEM
-  // ==========================================
   window.openOrderModal = function(side) {
     if(!allCandles.length) return;
     tempOrderSide = side;
@@ -583,36 +540,26 @@
   }
 
   $('confirmOrderBtn').addEventListener('click', () => {
-    let lot = parseFloat($('inLot').value) || 0.1;
-    let entryInput = parseFloat($('inEntry').value) || 0;
-    let sl = parseFloat($('inSl').value) || 0;
-    let tp = parseFloat($('inTp').value) || 0;
-    
-    let currentPx = allCandles[visibleIdx - 1].close;
-    let entry = entryInput > 0 ? entryInput : currentPx;
+    let lot = parseFloat($('inLot').value) || 0.1, entryInput = parseFloat($('inEntry').value) || 0;
+    let sl = parseFloat($('inSl').value) || 0, tp = parseFloat($('inTp').value) || 0;
+    let currentPx = allCandles[visibleIdx - 1].close, entry = entryInput > 0 ? entryInput : currentPx;
 
     let trade = { id: Date.now(), side: tempOrderSide, lot: lot, entry: entry, sl: sl, tp: tp, lineObj: null };
-
     trade.lineObj = candleSeries.createPriceLine({
-      price: entry, color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
-      lineWidth: 1, lineStyle: 2, title: `${trade.side} ${lot}L`
+      price: entry, color: trade.side === 'BUY' ? '#22c55e' : '#ef4444', lineWidth: 1, lineStyle: 2, title: `${trade.side} ${lot}L`
     });
 
-    openTrades.push(trade);
-    closeModal('orderModal');
+    openTrades.push(trade); closeModal('orderModal');
     toast(`${trade.side} Executed @ ${entry.toFixed(2)}`, 'success');
-    calculateFloatingPnL(currentPx);
-    renderTerminal();
+    calculateFloatingPnL(currentPx); renderTerminal();
   });
 
   function calculateFloatingPnL(currentPx) {
     let totalPnL = 0;
     openTrades.forEach(t => {
       let diff = t.side === 'BUY' ? (currentPx - t.entry) : (t.entry - currentPx);
-      t.livePnl = diff * t.lot * 100;
-      totalPnL += t.livePnl;
+      t.livePnl = diff * t.lot * 100; totalPnL += t.livePnl;
     });
-
     $('balanceVal').innerText = fmtMoney(balance);
     $('pnlVal').innerText = fmtMoney(totalPnL);
     $('pnlVal').className = 'value ' + (totalPnL >= 0 ? 'pos' : 'neg');
@@ -620,30 +567,16 @@
   }
 
   window.executeCloseTrade = function(id, forcePrice = 0, reason = 'Manual') {
-    let idx = openTrades.findIndex(t => t.id === id);
-    if(idx === -1) return;
+    let idx = openTrades.findIndex(t => t.id === id); if(idx === -1) return;
+    let t = openTrades[idx], closePx = forcePrice > 0 ? forcePrice : allCandles[visibleIdx - 1].close;
+    let diff = t.side === 'BUY' ? (closePx - t.entry) : (t.entry - closePx), realizedPnL = diff * t.lot * 100;
     
-    let t = openTrades[idx];
-    let closePx = forcePrice > 0 ? forcePrice : allCandles[visibleIdx - 1].close;
-    let diff = t.side === 'BUY' ? (closePx - t.entry) : (t.entry - closePx);
-    let realizedPnL = diff * t.lot * 100;
-    
-    balance += realizedPnL;
-    candleSeries.removePriceLine(t.lineObj); 
-    openTrades.splice(idx, 1); 
-    
-    calculateFloatingPnL(closePx);
-    renderTerminal();
+    balance += realizedPnL; candleSeries.removePriceLine(t.lineObj); openTrades.splice(idx, 1); 
+    calculateFloatingPnL(closePx); renderTerminal();
     toast(`${t.side} Closed (${reason}) | PnL: ${fmtMoney(realizedPnL)}`, realizedPnL >= 0 ? 'success' : 'error');
   }
 
-  // ==========================================
-  // TERMINAL UI
-  // ==========================================
-  $('btnTerminal').addEventListener('click', () => {
-    renderTerminal();
-    $('terminalModal').classList.add('open');
-  });
+  $('btnTerminal').addEventListener('click', () => { renderTerminal(); $('terminalModal').classList.add('open'); });
 
   function renderTerminal() {
     let html = '';
@@ -651,15 +584,11 @@
       html = '<tr><td colspan="6" style="text-align:center; padding:15px; color:var(--muted)">Tidak ada posisi terbuka</td></tr>';
     } else {
       openTrades.forEach(t => {
-        let pnlColor = t.livePnl >= 0 ? 'pos' : 'neg';
-        let slStr = t.sl > 0 ? t.sl : '-';
-        let tpStr = t.tp > 0 ? t.tp : '-';
         html += `<tr>
           <td style="color:var(--${t.side==='BUY'?'green':'red'})"><b>${t.side}</b></td>
-          <td>${t.lot}</td>
-          <td>${t.entry.toFixed(2)}</td>
-          <td style="font-size:9px; color:var(--muted)">S:${slStr}<br>T:${tpStr}</td>
-          <td class="${pnlColor}"><b>$${t.livePnl.toFixed(2)}</b></td>
+          <td>${t.lot}</td><td>${t.entry.toFixed(2)}</td>
+          <td style="font-size:9px; color:var(--muted)">S:${t.sl>0?t.sl:'-'}<br>T:${t.tp>0?t.tp:'-'}</td>
+          <td class="${t.livePnl>=0?'pos':'neg'}"><b>$${t.livePnl.toFixed(2)}</b></td>
           <td><button class="btn-close" onclick="executeCloseTrade(${t.id})">X</button></td>
         </tr>`;
       });
@@ -669,10 +598,6 @@
 
   window.openModal = function(id) { $(id).classList.add('open'); }
   window.closeModal = function(id) { $(id).classList.remove('open'); }
-
-  // ==========================================
-  // EVENT LISTENERS & UTILS
-  // ==========================================
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
   function fmtMoney(n) { return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -682,7 +607,6 @@
   $('nextBtn').addEventListener('click', nextCandle);
   $('playBtn').addEventListener('click', togglePlay);
   
-  // Setup Speed Buttons
   document.querySelectorAll('#speedSeg button').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('#speedSeg button').forEach(x => x.classList.remove('active'));
@@ -691,19 +615,15 @@
     });
   });
 
-  // Setup TF Buttons
   document.querySelectorAll('#tfSeg button').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('#tfSeg button').forEach(x => x.classList.remove('active'));
-      b.classList.add('active'); 
-      currentTF = b.dataset.tf;
-      applyFilters(); 
+      b.classList.add('active'); currentTF = b.dataset.tf; applyFilters(); 
     });
   });
 
   function stopPlay() { playing = false; $('playBtn').innerHTML = '▶ Play'; clearInterval(playTimer); }
-
-  // BOOTING APP
+  
   fetchHistory();
 })();
 </script>
