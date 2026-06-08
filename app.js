@@ -1,18 +1,35 @@
-// Ganti isi app.js Anda dengan ini untuk tes
-const chart = LightweightCharts.createChart(document.body, {
-    width: window.innerWidth,
-    height: window.innerHeight,
-    layout: {
-        background: { color: '#000000' },
-        textColor: '#DDD',
-    },
-});
-console.log("Isi variabel chart:", chart);
-console.log("Apakah addCandlestickSeries ada?", typeof chart.addCandlestickSeries);
-const candleSeries = chart.addCandlestickSeries();
-candleSeries.setData([
-    { time: '2026-06-01', open: 100, high: 120, low: 90, close: 110 },
-    { time: '2026-06-02', open: 110, high: 130, low: 105, close: 125 },
-]);
+window.addEventListener('load', function() {
+    console.log("Memulai inisialisasi...");
 
-console.log("Chart test berjalan!");
+    // Cek apakah library sudah terload
+    if (typeof LightweightCharts === 'undefined') {
+        console.error("Library LightweightCharts belum terload!");
+        return;
+    }
+
+    const chartContainer = document.getElementById('chart');
+    if (!chartContainer) {
+        console.error("Elemen #chart tidak ditemukan!");
+        return;
+    }
+
+    // Buat chart
+    const chart = LightweightCharts.createChart(chartContainer, {
+        layout: { background: { color: '#0b0f17' }, textColor: '#8a97ad' },
+        width: chartContainer.clientWidth,
+        height: chartContainer.clientHeight
+    });
+
+    // Pastikan chart berhasil dibuat sebelum menambah series
+    if (chart && typeof chart.addCandlestickSeries === 'function') {
+        const candleSeries = chart.addCandlestickSeries();
+        console.log("CandleSeries berhasil dibuat!");
+        
+        // Data dummy untuk tes
+        candleSeries.setData([
+            { time: '2026-06-01', open: 10, high: 15, low: 8, close: 12 }
+        ]);
+    } else {
+        console.error("Gagal membuat chart, objek tidak valid:", chart);
+    }
+});
