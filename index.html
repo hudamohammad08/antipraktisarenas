@@ -12,28 +12,12 @@
 
 <style>
   :root {
-    --bg-0: #0b0f17;
-    --bg-1: #111827;
-    --bg-2: #1a2233;
-    --line: #1f2a3d;
-    --text: #e6edf7;
-    --muted: #8a97ad;
-    --accent: #f5b301;
-    --green: #22c55e;
-    --red: #ef4444;
-    --blue: #3b82f6;
-    --warn: #f59e0b;
+    --bg-0: #0b0f17; --bg-1: #111827; --bg-2: #1a2233; --line: #1f2a3d;
+    --text: #e6edf7; --muted: #8a97ad; --accent: #f5b301;
+    --green: #22c55e; --red: #ef4444; --blue: #3b82f6; --warn: #f59e0b;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; padding: 0;
-    background: var(--bg-0);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    overscroll-behavior: none;
-    user-select: none;
-    height: 100%;
-  }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; overscroll-behavior: none; user-select: none; height: 100%; }
   #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
 
   /* TOP BAR */
@@ -66,28 +50,27 @@
   .pnl-badge { position: absolute; top: 8px; right: 8px; z-index: 3; background: rgba(17,24,39,0.7); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 11px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   .pnl-badge .label { color: var(--muted); font-size: 10px; }
   .pnl-badge .value { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .pos { color: var(--green); }
-  .neg { color: var(--red); }
+  .pos { color: var(--green); } .neg { color: var(--red); }
 
-  /* CONTROLS (15%) */
+  /* CONTROLS */
   .controls { flex: 0 0 auto; min-height: 15dvh; background: var(--bg-1); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
   .row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
   .row.scroll { overflow-x: auto; }
   .row.scroll::-webkit-scrollbar { display: none; }
   .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  .seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 600; }
+  .seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 600; white-space: nowrap; }
   .seg button.active { background: var(--accent); color: #0b0f17; }
 
-  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.05s ease; }
+  .btn { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.05s ease; white-space: nowrap; }
   .btn:active { transform: scale(0.97); }
   .btn.primary { background: var(--accent); color: #0b0f17; border-color: var(--accent); }
   .btn.buy { background: var(--green); color: #fff; border-color: var(--green); }
   .btn.sell { background: var(--red); color: #fff; border-color: var(--red); }
   .btn.terminal { background: var(--blue); color: #fff; border-color: var(--blue); }
-  .btn.ghost { background: transparent; }
+  .btn.ghost { background: transparent; border-color: var(--line); }
   .grow { flex: 1 1 auto; }
 
-  /* MODAL */
+  /* MODALS */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   .modal-bg.open { display: flex; }
   .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 380px; padding: 16px; }
@@ -135,7 +118,14 @@
 
   <div class="controls">
     <div class="row scroll">
-      <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">SPEED</span>
+      <span style="font-size: 10px; color: var(--muted); margin-right: 2px;">TF</span>
+      <div class="seg" id="tfSeg">
+        <button class="active">1H</button>
+        <button onclick="toast('Timeframe ini dikunci mengikuti setelan Google Sheets.', 'warn')">4H</button>
+        <button onclick="toast('Timeframe ini dikunci mengikuti setelan Google Sheets.', 'warn')">1D</button>
+      </div>
+
+      <span style="font-size: 10px; color: var(--muted); margin-left: 8px; margin-right: 2px;">SPEED</span>
       <div class="seg" id="speedSeg">
         <button data-speed="2000" class="active">1x</button>
         <button data-speed="800">2x</button>
@@ -143,7 +133,8 @@
         <button data-speed="50">MAX</button>
       </div>
       <div class="grow"></div>
-      <button class="btn terminal" id="btnTerminal">💼 Terminal (0)</button>
+      <button class="btn ghost" onclick="openModal('dateModal')">📅 Date</button>
+      <button class="btn terminal" id="btnTerminal">💼 (0)</button>
     </div>
 
     <div class="row">
@@ -152,6 +143,24 @@
       <div class="grow"></div>
       <button class="btn" id="playBtn">▶ Play</button>
       <button class="btn primary" id="nextBtn">Next ▶</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="dateModal">
+  <div class="modal">
+    <h3>📅 Pilih Tanggal Replay</h3>
+    <p style="font-size: 11px; color: var(--muted); margin-top:0;">Potong data dari Database untuk mensimulasikan tanggal tertentu.</p>
+    
+    <label>Start Date (Mulai)</label>
+    <input type="date" id="inStartDate">
+    
+    <label>End Date (Akhir - Opsional)</label>
+    <input type="date" id="inEndDate">
+    
+    <div class="row-btn">
+      <button class="btn ghost" onclick="closeModal('dateModal')">Cancel</button>
+      <button class="btn primary" onclick="applyDateFilter()">Apply Date</button>
     </div>
   </div>
 </div>
@@ -197,7 +206,9 @@
   // ==========================================
   const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQk1O9CGYTBQ2_GdpqRCJd6LFXj2DJZddPaZXzXuYpdFeYgBd6dYEpaJQnowmAO1oKJ3XlCLmQzIPex/pub?output=csv";
   
-  let allCandles = [], visibleIdx = 0, speedMs = 2000, playing = false, playTimer = null;
+  let masterCandles = []; // Data mentah asli dari Sheets
+  let allCandles = [];    // Data yang sudah dipotong berdasarkan Tanggal
+  let visibleIdx = 0, speedMs = 2000, playing = false, playTimer = null;
   let balance = 10000.00;
   let openTrades = []; 
   let tempOrderSide = '';
@@ -227,25 +238,14 @@
 
   // ==========================================
   // ROBUST NUMBER PARSER (ANTI-ERROR)
-  // Menyesuaikan format ribuan Indonesia & US
   // ==========================================
   function parseCleanNumber(str) {
     if (!str) return 0;
-    // Hilangkan tanda kutip dan spasi
     let s = str.toString().replace(/['"\s]/g, '');
-    
     let lastComma = s.lastIndexOf(',');
     let lastDot = s.lastIndexOf('.');
-    
-    // Jika format Indonesia (1.234.567,89)
-    if (lastComma > lastDot) {
-      s = s.replace(/\./g, '').replace(',', '.');
-    } 
-    // Jika format US (1,234,567.89)
-    else {
-      s = s.replace(/,/g, '');
-    }
-    
+    if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(/,/g, '');
     let result = parseFloat(s);
     return isNaN(result) ? 0 : result;
   }
@@ -262,39 +262,81 @@
       const rows = csv.trim().split('\n');
       rows.shift(); // Buang header
       
-      allCandles = rows.map(r => {
-        // Pemisah CSV yang cerdas (mengabaikan koma di dalam tanda kutip)
+      masterCandles = rows.map(r => {
         const cols = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-        
-        let timeStr = (cols[0] || '').replace(/["']/g, ''); // Bersihkan kutip dari string waktu
-        
+        let timeStr = (cols[0] || '').replace(/["']/g, ''); 
         return { 
           time: Math.floor(new Date(timeStr.replace(' ', 'T') + 'Z').getTime() / 1000), 
           open: parseCleanNumber(cols[1]), 
           high: parseCleanNumber(cols[2]), 
           low: parseCleanNumber(cols[3]), 
-          close: parseCleanNumber(cols[4]) 
+          close: parseCleanNumber(cols[4]),
+          rawDate: timeStr // Simpan untuk referensi Date Picker
         };
-      }).filter(c => c.time && c.close && c.close > 0)
-        .sort((a,b) => a.time - b.time);
+      }).filter(c => c.time && c.close && c.close > 0).sort((a,b) => a.time - b.time);
 
-      if(allCandles.length === 0) throw new Error("Dataset kosong setelah disaring.");
+      if(masterCandles.length === 0) throw new Error("Dataset kosong.");
 
-      visibleIdx = Math.min(50, allCandles.length - 1);
-      candleSeries.setData(allCandles.slice(0, visibleIdx));
-      chart.timeScale().fitContent();
-      
+      // Set batas tanggal default di UI Modal (Dari candle pertama ke terakhir)
+      $('inStartDate').value = masterCandles[0].rawDate.split(' ')[0];
+      $('inEndDate').value = masterCandles[masterCandles.length - 1].rawDate.split(' ')[0];
+
+      // Load semua data di awal
+      allCandles = [...masterCandles];
+      resetAndRenderChart();
+
       $('loadingOverlay').style.display = 'none';
       $('hud').style.display = 'flex'; $('pnlBadge').style.display = 'flex';
       $('statusBox').className = 'status ok'; $('statusText').innerText = 'Connected';
-      updateHUD(allCandles[visibleIdx - 1]);
-      updateProgress();
       toast(`Sukses memuat ${allCandles.length} Bar Data`, 'success');
     } catch(e) {
       console.error(e);
-      $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Format Data';
+      $('statusBox').className = 'status err'; $('statusText').innerText = 'Error Database';
       $('loadingOverlay').innerHTML = `<div class="card"><h3 style="color:#ef4444">⚠ Error Parser</h3><p>${e.message}</p><button onclick="window.location.reload()">Refresh</button></div>`;
     }
+  }
+
+  // ==========================================
+  // FILTER TANGGAL (DATE RANGE PICKER)
+  // ==========================================
+  window.applyDateFilter = function() {
+    let startVal = $('inStartDate').value;
+    let endVal = $('inEndDate').value;
+
+    if (!startVal) { toast("Start Date wajib diisi!", "error"); return; }
+
+    let startUnix = new Date(startVal + "T00:00:00Z").getTime() / 1000;
+    let endUnix = endVal ? new Date(endVal + "T23:59:59Z").getTime() / 1000 : Infinity;
+
+    // Filter master data
+    let filtered = masterCandles.filter(c => c.time >= startUnix && c.time <= endUnix);
+
+    if (filtered.length === 0) {
+      toast("Tidak ada data pada tanggal tersebut!", "error");
+    } else {
+      stopPlay();
+      // Reset Transaksi yang sedang berjalan jika tanggal diganti
+      openTrades.forEach(t => candleSeries.removePriceLine(t.lineObj));
+      openTrades = [];
+      balance = 10000.00;
+      calculateFloatingPnL(0);
+      
+      allCandles = filtered;
+      resetAndRenderChart();
+      closeModal('dateModal');
+      toast(`Data dipotong: ${allCandles.length} Bar ditemukan.`, 'success');
+    }
+  }
+
+  function resetAndRenderChart() {
+    visibleIdx = Math.min(50, allCandles.length); // Tampilkan 50 candle pertama sebagai awalan
+    candleSeries.setData(allCandles.slice(0, visibleIdx));
+    
+    // SMART ZOOM: Memaksa ukuran candle terlihat normal (tidak terlalu kecil)
+    chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, visibleIdx - 60), to: visibleIdx + 5 });
+    
+    if(visibleIdx > 0) updateHUD(allCandles[visibleIdx - 1]);
+    updateProgress();
   }
 
   // ==========================================
@@ -348,7 +390,7 @@
     if(!allCandles.length) return;
     tempOrderSide = side;
     $('orderTitle').innerText = `New ${side} Order`;
-    $('inEntry').value = "0"; // Reset
+    $('inEntry').value = "0"; 
     $('orderModal').classList.add('open');
   }
 
@@ -358,24 +400,15 @@
     let sl = parseFloat($('inSl').value) || 0;
     let tp = parseFloat($('inTp').value) || 0;
     
-    // Default Market Execution
     let currentPx = allCandles[visibleIdx - 1].close;
     let entry = entryInput > 0 ? entryInput : currentPx;
 
     let trade = {
-      id: Date.now(),
-      side: tempOrderSide,
-      lot: lot,
-      entry: entry,
-      sl: sl,
-      tp: tp,
-      lineObj: null 
+      id: Date.now(), side: tempOrderSide, lot: lot, entry: entry, sl: sl, tp: tp, lineObj: null 
     };
 
-    // Draw Price Line on Chart
     trade.lineObj = candleSeries.createPriceLine({
-      price: entry,
-      color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
+      price: entry, color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
       lineWidth: 1, lineStyle: 2, title: `${trade.side} ${lot}L`
     });
 
@@ -397,7 +430,7 @@
     $('balanceVal').innerText = fmtMoney(balance);
     $('pnlVal').innerText = fmtMoney(totalPnL);
     $('pnlVal').className = 'value ' + (totalPnL >= 0 ? 'pos' : 'neg');
-    $('btnTerminal').innerText = `💼 Terminal (${openTrades.length})`;
+    $('btnTerminal').innerText = `💼 (${openTrades.length})`;
   }
 
   window.executeCloseTrade = function(id, forcePrice = 0, reason = 'Manual') {
@@ -448,6 +481,7 @@
     $('terminalBody').innerHTML = html;
   }
 
+  window.openModal = function(id) { $(id).classList.add('open'); }
   window.closeModal = function(id) { $(id).classList.remove('open'); }
 
   // ==========================================
@@ -456,7 +490,8 @@
   function updateHUD(c) { $('ohlc').innerHTML = `<span><b>O</b>${c.open.toFixed(2)}</span><span><b>H</b>${c.high.toFixed(2)}</span><span><b>L</b>${c.low.toFixed(2)}</span><span style="color:${c.close>=c.open?'#22c55e':'#ef4444'}"><b style="color:var(--muted)">C</b>${c.close.toFixed(2)}</span>`; }
   function updateProgress() { $('progressLabel').innerText = `Bar ${visibleIdx}/${allCandles.length}`; }
   function fmtMoney(n) { return (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
-  let tTimer; function toast(m, k) { $('toast').textContent=m; $('toast').className='toast show '+k; clearTimeout(tTimer); tTimer=setTimeout(()=>$('toast').className='toast',2000); }
+  
+  let tTimer; window.toast = function(m, k) { $('toast').textContent=m; $('toast').className='toast show '+k; clearTimeout(tTimer); tTimer=setTimeout(()=>$('toast').className='toast',3000); }
 
   $('nextBtn').addEventListener('click', nextCandle);
   $('playBtn').addEventListener('click', togglePlay);
