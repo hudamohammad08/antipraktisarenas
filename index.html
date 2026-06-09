@@ -1,15 +1,35 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <title>Backtesting Lite</title>
-    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.4/dist/lightweight-charts.standalone.production.js"></script>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Max Arena Controller</title>
+<style>
+  body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background: #0b0f17; overflow: hidden; }
+  
+  /* Iframe untuk memuat StrategyTune */
+  iframe { flex: 1; border: none; width: 100%; height: calc(100vh - 70px); }
+  
+  /* Kontrol tetap di bawah */
+  .footer-controls { height: 70px; display: flex; align-items: center; justify-content: center; background: #111827; border-top: 1px solid #1f2a3d; position: fixed; bottom: 0; width: 100%; }
+  
+  .btn-input { background: #f5b301; color: #000; padding: 12px 30px; border-radius: 8px; font-weight: bold; border: none; font-size: 16px; cursor: pointer; }
+</style>
 </head>
 <body>
-    <div id="chart-container">
-        <div id="chart"></div>
-        <canvas id="drawing-canvas"></canvas>
-    </div>
-    <script src="app.js"></script>
+
+<iframe src="https://strategytune.com/app" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+<div class="footer-controls">
+  <button class="btn-input" onclick="bukaForm()">Input Transaksi</button>
+</div>
+
+<script>
+  function bukaForm() {
+    // Di sini Anda bisa arahkan ke Telegram Mini App Form Anda
+    // Atau munculkan popup form sederhana
+    alert("Silakan masukkan detail transaksi Anda.");
+  }
+</script>
 </body>
 </html>
