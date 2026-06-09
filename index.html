@@ -17,21 +17,26 @@
     overflow: hidden; 
   }
   
-  /* WADAH SCROLL 4 ARAH */
   .iframe-container {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: calc(100vh - 70px);
-    overflow: auto; /* Mengizinkan scroll atas, bawah, kiri, kanan */
+    overflow: auto;
     -webkit-overflow-scrolling: touch; 
   }
 
-  /* PAKSA MODE LAPTOP (DESKTOP VIEW) */
+  /* KOTAK PENYESUAI UKURAN */
+  #scaler {
+    width: 100%;
+    height: 100%;
+    transform-origin: top center;
+  }
+
   iframe { 
-    width: 1280px; /* Memaksa lebar seperti monitor laptop */
-    height: 900px; /* Memaksa tinggi seperti monitor laptop */
+    width: 100%; 
+    height: 100%; 
     border: none; 
     display: block; 
   }
@@ -47,7 +52,7 @@
   /* MODAL FORM INPUT */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
   .modal-bg.open { display: flex; }
-  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; width: 100%; max-width: 340px; padding: 20px; }
+  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; width: 100%; max-width: 340px; padding: 20px; max-height: 85vh; overflow-y: auto; }
   .modal h3 { margin: 0 0 16px; text-align: center; }
   
   .input-group { margin-bottom: 12px; }
@@ -69,7 +74,9 @@
 <body>
 
 <div class="iframe-container">
-  <iframe src="https://strategytune.com/app" allowfullscreen></iframe>
+  <div id="scaler">
+    <iframe src="https://strategytune.com/app" allowfullscreen></iframe>
+  </div>
 </div>
 
 <div class="footer-controls">
@@ -98,9 +105,49 @@
 <div class="toast" id="toast">Data tersimpan!</div>
 
 <script>
+  // ==========================================
+  // MASUKKAN URL WEB APP GOOGLE SHEETS ANDA
+  // ==========================================
   const GOOGLE_SHEETS_URL = "MASUKKAN_URL_WEB_APP_DISINI";
+
   const modal = document.getElementById('inputModal');
   const toast = document.getElementById('toast');
+
+  // --- FITUR AUTO-FIT LAYAR LANDSCAPE ---
+  function applySmartFit() {
+    const scaler = document.getElementById('scaler');
+    const isLandscape = window.innerWidth > window.innerHeight;
+
+    if (isLandscape) {
+      // Tinggi target standar website agar PNL muncul utuh
+      const targetHeight = 850; 
+      // Sisa layar HP yang tersedia (dikurangi tombol bawah 70px)
+      const availableHeight = window.innerHeight - 70;
+      
+      // Kalkulasi rasio pengecilan
+      const zoomLevel = availableHeight / targetHeight;
+
+      // Terapkan Zoom & sesuaikan lebar agar tidak ada ruang kosong di pinggir
+      scaler.style.zoom = zoomLevel;
+      scaler.style.width = (100 / zoomLevel) + '%';
+      scaler.style.height = targetHeight + 'px';
+    } else {
+      // Kembalikan ke normal jika HP ditegakkan (Portrait)
+      scaler.style.zoom = 1;
+      scaler.style.width = '100%';
+      scaler.style.height = '100%';
+    }
+  }
+
+  // Pantau jika HP diputar atau layar berubah ukuran
+  window.addEventListener('resize', applySmartFit);
+  window.addEventListener('orientationchange', () => {
+    setTimeout(applySmartFit, 150); // Jeda sedikit agar layar selesai memutar
+  });
+  
+  // Terapkan saat pertama kali dibuka
+  applySmartFit();
+  // ---------------------------------------
 
   function openForm() { modal.classList.add('open'); }
   function closeForm() { modal.classList.remove('open'); }
@@ -125,6 +172,12 @@
       closeForm();
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3000);
+      
+      // Kosongkan form setelah simpan
+      document.getElementById('inLot').value = '';
+      document.getElementById('inEntry').value = '';
+      document.getElementById('inClose').value = '';
+      document.getElementById('inPnl').value = '';
     } finally {
       document.getElementById('btnSave').innerText = "Simpan";
     }
