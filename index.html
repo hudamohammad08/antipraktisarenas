@@ -3,48 +3,31 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Anti Praktis ArenaBot - Chart Only</title>
+<title>Anti Praktis ArenaBot - Absolute Fit</title>
 <style>
-  :root {
-    --bg-0: #0b0f17; /* Warna background TradingView agar serasi jika loading */
-  }
-  
   body, html { 
     margin: 0; padding: 0; 
-    background: var(--bg-0);
-    width: 100%;
-    height: 100%;
-    overflow: hidden; /* Mengunci scroll pada body utama */
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background: #0b0f17;
+    width: 100%; height: 100%;
+    overflow: hidden; /* Pastikan tidak bisa di-scroll manual agar tidak goyang */
   }
   
-  /* WADAH UTAMA - SEKARANG FULL SCREEN (TIDAK ADA FOOTER) */
   .iframe-container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
     overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start; /* Memulai penskalaan dari atas */
   }
 
-  /* KOTAK PENYESUAI UKURAN (SCALER) - LOGIKA PERBAIKAN LEBAR */
   #scaler {
-    transform-origin: top center; /* Titik tumpu penskalaan di atas tengah */
-    will-change: transform; /* Optimalisasi performa pada HP */
+    transform-origin: top left; /* Kunci titik susut di pojok kiri atas */
+    will-change: transform;
   }
 
   iframe { 
-    width: 100%; 
-    height: 100%; 
-    border: none; 
-    display: block; 
-    /* Memastikan tidak ada margin internal dari widget TradingView */
-    margin: 0; 
-    padding: 0;
+    width: 100%; height: 100%; 
+    border: none; display: block; 
+    margin: 0; padding: 0;
   }
 </style>
 </head>
@@ -57,41 +40,38 @@
 </div>
 
 <script>
-  // --- FITUR SKALA PRESISI (FIT LEBAR & TINGGI) ---
-  function applyPerfectFit() {
+  function applyAbsoluteFit() {
     const container = document.getElementById('container');
     const scaler = document.getElementById('scaler');
     
-    // Ambil ukuran layar TWA saat ini
-    const availableWidth = container.clientWidth;
-    const availableHeight = container.clientHeight;
+    // 1. Ukur lebar dan tinggi fisik layar HP Anda saat ini
+    const screenW = container.clientWidth;
+    const screenH = container.clientHeight;
     
-    // Tentukan resolusi "Desktop" palsu agar PNL muncul
-    // targetWidth diperkecil ke 1100 agar teks tidak terlalu kecil saat disusutkan
-    const targetWidth = 1100; 
-    const targetHeight = 800; // Tinggi ini cukup untuk memunculkan panel bawah (Orders/PNL)
+    // 2. Kita paksa tinggi virtual minimal 850px agar panel PNL pasti muncul
+    const targetHeight = 850; 
     
-    // Atur ukuran dasar scaler ke ukuran target desktop
+    // 3. RUMUS RAHASIA: Sesuaikan lebar virtual mengikuti rasio HP Anda
+    const aspectRatio = screenW / screenH;
+    const targetWidth = targetHeight * aspectRatio;
+    
+    // 4. Terapkan ukuran virtual ke iframe
     scaler.style.width = targetWidth + 'px';
     scaler.style.height = targetHeight + 'px';
 
-    // Kalkulasi seberapa besar penyusutan yang dibutuhkan agar pas ke layar HP
-    // finalScale dihitung agar 1100px desktop pas ke lebar layar HP Anda
-    const finalScale = availableWidth / targetWidth;
-
-    // Terapkan penyusutan (skala) secara paksa
-    // Ini akan menghilangkan bar hitam di kiri-kanan
-    scaler.style.transform = `scale(${finalScale})`;
+    // 5. Susutkan iframe tersebut agar masuk ke layar HP Anda secara akurat
+    const scaleFactor = screenH / targetHeight;
+    scaler.style.transform = `scale(${scaleFactor})`;
   }
 
-  // Pantau pergerakan layar (jika diputar atau direformasi oleh Telegram)
-  window.addEventListener('resize', applyPerfectFit);
+  // Pantau jika ada perubahan layar (misal: buka tutup keyboard atau putar layar)
+  window.addEventListener('resize', applyAbsoluteFit);
   window.addEventListener('orientationchange', () => {
-    setTimeout(applyPerfectFit, 300); // Tunggu sampai layar selesai memutar sempurna
+    setTimeout(applyAbsoluteFit, 300); // Jeda agar rotasi layar selesai
   });
   
-  // Eksekusi langsung saat dibuka
-  applyPerfectFit();
+  // Jalankan saat pertama kali dibuka
+  applyAbsoluteFit();
 </script>
 </body>
 </html>
