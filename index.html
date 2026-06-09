@@ -2,37 +2,39 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Trading Journal App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Anti Praktis ArenaBot - Chart Only</title>
 <style>
   :root {
-    --bg-0: #0b0f17; --bg-1: #111827; --bg-2: #1a2233; --line: #1f2a3d;
-    --text: #e6edf7; --accent: #f5b301; --green: #22c55e; --red: #ef4444;
+    --bg-0: #0b0f17; /* Warna background TradingView agar serasi jika loading */
   }
   
-  body { 
+  body, html { 
     margin: 0; padding: 0; 
-    background: var(--bg-0); color: var(--text); 
-    font-family: -apple-system, sans-serif; 
-    overflow: hidden; 
-  }
-  
-  /* WADAH UTAMA */
-  .iframe-container {
-    position: absolute;
-    top: 0;
-    left: 0;
+    background: var(--bg-0);
     width: 100%;
-    height: calc(100vh - 70px); /* Sisa layar dikurangi tombol bawah */
-    overflow: hidden; /* Kunci scroll agar benar-benar fit */
+    height: 100%;
+    overflow: hidden; /* Mengunci scroll pada body utama */
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
+  }
+  
+  /* WADAH UTAMA - SEKARANG FULL SCREEN (TIDAK ADA FOOTER) */
+  .iframe-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Memulai penskalaan dari atas */
   }
 
-  /* KOTAK PENYESUAI UKURAN (SCALER) */
+  /* KOTAK PENYESUAI UKURAN (SCALER) - LOGIKA PERBAIKAN LEBAR */
   #scaler {
-    transform-origin: top center;
+    transform-origin: top center; /* Titik tumpu penskalaan di atas tengah */
+    will-change: transform; /* Optimalisasi performa pada HP */
   }
 
   iframe { 
@@ -40,36 +42,10 @@
     height: 100%; 
     border: none; 
     display: block; 
+    /* Memastikan tidak ada margin internal dari widget TradingView */
+    margin: 0; 
+    padding: 0;
   }
-  
-  /* PANEL BAWAH TETAP DI TEMPAT */
-  .footer-controls { 
-    position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; 
-    display: flex; align-items: center; justify-content: center; 
-    background: var(--bg-1); border-top: 1px solid var(--line); z-index: 10;
-  }
-  .btn-main { background: var(--accent); color: #000; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 16px; border: none; cursor: pointer; width: 90%; max-width: 400px; }
-
-  /* MODAL FORM INPUT */
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
-  .modal-bg.open { display: flex; }
-  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; width: 100%; max-width: 340px; padding: 20px; max-height: 85vh; overflow-y: auto; }
-  .modal h3 { margin: 0 0 16px; text-align: center; }
-  
-  .input-group { margin-bottom: 12px; }
-  .input-group label { display: block; font-size: 11px; color: #8a97ad; margin-bottom: 4px; }
-  .input-group input, .input-group select { width: 100%; padding: 10px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; color: #fff; font-size: 14px; outline: none; box-sizing: border-box; }
-  
-  .row { display: flex; gap: 10px; }
-  .row .input-group { flex: 1; }
-  
-  .action-btns { display: flex; gap: 10px; margin-top: 20px; }
-  .action-btns button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-  .btn-cancel { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); }
-  .btn-save { background: var(--green); color: #fff; }
-
-  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--green); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: bold; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 200; }
-  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -80,117 +56,42 @@
   </div>
 </div>
 
-<div class="footer-controls">
-  <button class="btn-main" onclick="openForm()">📝 Input Transaksi</button>
-</div>
-
-<div class="modal-bg" id="inputModal">
-  <div class="modal">
-    <h3>Data Transaksi</h3>
-    <div class="row">
-      <div class="input-group"><label>Tipe Order</label><select id="inType"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
-      <div class="input-group"><label>Lot Size</label><input type="number" id="inLot" placeholder="0.10" step="0.01"></div>
-    </div>
-    <div class="row">
-      <div class="input-group"><label>Entry Price</label><input type="number" id="inEntry"></div>
-      <div class="input-group"><label>Close Price</label><input type="number" id="inClose"></div>
-    </div>
-    <div class="input-group"><label>Hasil P&L ($)</label><input type="number" id="inPnl"></div>
-    <div class="action-btns">
-      <button class="btn-cancel" onclick="closeForm()">Batal</button>
-      <button class="btn-save" id="btnSave" onclick="submitData()">Simpan</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast">Data tersimpan!</div>
-
 <script>
-  // ==========================================
-  // MASUKKAN URL WEB APP GOOGLE SHEETS ANDA
-  // ==========================================
-  const GOOGLE_SHEETS_URL = "MASUKKAN_URL_WEB_APP_DISINI";
-
-  const modal = document.getElementById('inputModal');
-  const toast = document.getElementById('toast');
-
-  // --- FITUR SKALA PRESISI TINGGI ---
+  // --- FITUR SKALA PRESISI (FIT LEBAR & TINGGI) ---
   function applyPerfectFit() {
     const container = document.getElementById('container');
     const scaler = document.getElementById('scaler');
-    const isLandscape = window.innerWidth > window.innerHeight;
+    
+    // Ambil ukuran layar TWA saat ini
+    const availableWidth = container.clientWidth;
+    const availableHeight = container.clientHeight;
+    
+    // Tentukan resolusi "Desktop" palsu agar PNL muncul
+    // targetWidth diperkecil ke 1100 agar teks tidak terlalu kecil saat disusutkan
+    const targetWidth = 1100; 
+    const targetHeight = 800; // Tinggi ini cukup untuk memunculkan panel bawah (Orders/PNL)
+    
+    // Atur ukuran dasar scaler ke ukuran target desktop
+    scaler.style.width = targetWidth + 'px';
+    scaler.style.height = targetHeight + 'px';
 
-    if (isLandscape) {
-      // 1. Kita tentukan resolusi "Laptop" palsu agar panel PNL muncul
-      const targetWidth = 1200;
-      const targetHeight = 800; // Ukuran ini sudah cukup untuk memunculkan panel bawah
-      
-      // 2. Kita ukur ruang kosong yang ada di HP Anda saat ini
-      const availableWidth = container.clientWidth;
-      const availableHeight = container.clientHeight;
-      
-      // 3. Kita hitung seberapa besar penyusutan yang dibutuhkan
-      const scaleW = availableWidth / targetWidth;
-      const scaleH = availableHeight / targetHeight;
-      
-      // 4. Pilih penyusutan paling maksimal agar tidak ada yang terpotong sama sekali
-      const finalScale = Math.min(scaleW, scaleH);
+    // Kalkulasi seberapa besar penyusutan yang dibutuhkan agar pas ke layar HP
+    // finalScale dihitung agar 1100px desktop pas ke lebar layar HP Anda
+    const finalScale = availableWidth / targetWidth;
 
-      // 5. Terapkan secara paksa
-      scaler.style.width = targetWidth + 'px';
-      scaler.style.height = targetHeight + 'px';
-      scaler.style.transform = `scale(${finalScale})`;
-      
-    } else {
-      // Jika HP ditegakkan (Portrait), kembali ke normal
-      scaler.style.width = '100%';
-      scaler.style.height = '100%';
-      scaler.style.transform = 'none';
-    }
+    // Terapkan penyusutan (skala) secara paksa
+    // Ini akan menghilangkan bar hitam di kiri-kanan
+    scaler.style.transform = `scale(${finalScale})`;
   }
 
-  // Pantau pergerakan layar
+  // Pantau pergerakan layar (jika diputar atau direformasi oleh Telegram)
   window.addEventListener('resize', applyPerfectFit);
   window.addEventListener('orientationchange', () => {
-    setTimeout(applyPerfectFit, 200); // Tunggu sampai layar selesai memutar
+    setTimeout(applyPerfectFit, 300); // Tunggu sampai layar selesai memutar sempurna
   });
   
-  // Eksekusi langsung
+  // Eksekusi langsung saat dibuka
   applyPerfectFit();
-  // ---------------------------------------
-
-  function openForm() { modal.classList.add('open'); }
-  function closeForm() { modal.classList.remove('open'); }
-
-  async function submitData() {
-    const data = {
-      type: document.getElementById('inType').value,
-      lot: document.getElementById('inLot').value,
-      entry: document.getElementById('inEntry').value,
-      close: document.getElementById('inClose').value,
-      pnl: document.getElementById('inPnl').value
-    };
-
-    if(!data.lot || !data.entry || !data.close || !data.pnl) return alert("Lengkapi data!");
-
-    document.getElementById('btnSave').innerText = "⏳...";
-    
-    try {
-      if(GOOGLE_SHEETS_URL !== "MASUKKAN_URL_WEB_APP_DISINI") {
-        await fetch(GOOGLE_SHEETS_URL, { method: 'POST', body: JSON.stringify(data), mode: 'no-cors' });
-      }
-      closeForm();
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3000);
-      
-      document.getElementById('inLot').value = '';
-      document.getElementById('inEntry').value = '';
-      document.getElementById('inClose').value = '';
-      document.getElementById('inPnl').value = '';
-    } finally {
-      document.getElementById('btnSave').innerText = "Simpan";
-    }
-  }
 </script>
 </body>
 </html>
