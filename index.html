@@ -2,76 +2,51 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Anti Praktis ArenaBot - Absolute Fit</title>
+<meta id="smartViewport" name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StrategyTune - Smart Auto-Fit</title>
 <style>
   body, html { 
     margin: 0; padding: 0; 
+    width: 100%; height: 100%; 
     background: #0b0f17;
-    width: 100%; height: 100%;
-    overflow: hidden; /* Pastikan tidak bisa di-scroll manual agar tidak goyang */
   }
-  
-  .iframe-container {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    overflow: hidden;
-  }
-
-  #scaler {
-    transform-origin: top left; /* Kunci titik susut di pojok kiri atas */
-    will-change: transform;
-  }
-
   iframe { 
     width: 100%; height: 100%; 
     border: none; display: block; 
-    margin: 0; padding: 0;
   }
 </style>
 </head>
 <body>
 
-<div class="iframe-container" id="container">
-  <div id="scaler">
-    <iframe src="https://strategytune.com/app" allowfullscreen></iframe>
-  </div>
-</div>
+  <iframe src="https://strategytune.com/app" allowfullscreen></iframe>
 
-<script>
-  function applyAbsoluteFit() {
-    const container = document.getElementById('container');
-    const scaler = document.getElementById('scaler');
-    
-    // 1. Ukur lebar dan tinggi fisik layar HP Anda saat ini
-    const screenW = container.clientWidth;
-    const screenH = container.clientHeight;
-    
-    // 2. Kita paksa tinggi virtual minimal 850px agar panel PNL pasti muncul
-    const targetHeight = 850; 
-    
-    // 3. RUMUS RAHASIA: Sesuaikan lebar virtual mengikuti rasio HP Anda
-    const aspectRatio = screenW / screenH;
-    const targetWidth = targetHeight * aspectRatio;
-    
-    // 4. Terapkan ukuran virtual ke iframe
-    scaler.style.width = targetWidth + 'px';
-    scaler.style.height = targetHeight + 'px';
+  <script>
+    function adjustComfort() {
+      const viewport = document.getElementById('smartViewport');
+      const isPortrait = window.innerHeight > window.innerWidth;
 
-    // 5. Susutkan iframe tersebut agar masuk ke layar HP Anda secara akurat
-    const scaleFactor = screenH / targetHeight;
-    scaler.style.transform = `scale(${scaleFactor})`;
-  }
+      if (isPortrait) {
+        // MODE TEGAK (PORTRAIT)
+        // Kita tipu webnya menjadi seukuran Tablet (980px)
+        // Ini adalah ukuran terkecil di mana panel PNL biasanya masih mau muncul.
+        // user-scalable=yes mengizinkan Anda men-zoom layar dengan dua jari.
+        viewport.setAttribute('content', 'width=980, user-scalable=yes');
+      } else {
+        // MODE MENDATAR (LANDSCAPE)
+        // Kita tipu webnya menjadi seukuran Laptop (1200px) agar grafik lega.
+        viewport.setAttribute('content', 'width=1200, user-scalable=yes');
+      }
+    }
 
-  // Pantau jika ada perubahan layar (misal: buka tutup keyboard atau putar layar)
-  window.addEventListener('resize', applyAbsoluteFit);
-  window.addEventListener('orientationchange', () => {
-    setTimeout(applyAbsoluteFit, 300); // Jeda agar rotasi layar selesai
-  });
-  
-  // Jalankan saat pertama kali dibuka
-  applyAbsoluteFit();
-</script>
+    // Pantau setiap kali Anda memutar HP
+    window.addEventListener('orientationchange', function() {
+      // Beri jeda sedikit agar sensor HP selesai memutar layar
+      setTimeout(adjustComfort, 300); 
+    });
+    
+    // Jalankan skrip saat aplikasi pertama kali dibuka
+    adjustComfort();
+  </script>
+
 </body>
 </html>
