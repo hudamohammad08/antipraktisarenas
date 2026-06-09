@@ -3,32 +3,191 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Max Arena Controller</title>
+<title>Trading Journal App</title>
 <style>
-  body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background: #0b0f17; overflow: hidden; }
+  :root {
+    --bg-0: #0b0f17; --bg-1: #111827; --bg-2: #1a2233; --line: #1f2a3d;
+    --text: #e6edf7; --accent: #f5b301; --green: #22c55e; --red: #ef4444;
+  }
   
-  /* Iframe untuk memuat StrategyTune */
-  iframe { flex: 1; border: none; width: 100%; height: calc(100vh - 70px); }
+  /* Body utama dikunci agar tombol bawah tidak ikut bergerak */
+  body { 
+    margin: 0; padding: 0; 
+    background: var(--bg-0); color: var(--text); 
+    font-family: -apple-system, sans-serif; 
+    overflow: hidden; 
+  }
   
-  /* Kontrol tetap di bawah */
-  .footer-controls { height: 70px; display: flex; align-items: center; justify-content: center; background: #111827; border-top: 1px solid #1f2a3d; position: fixed; bottom: 0; width: 100%; }
+  /* WADAH SCROLL IFRAME (SOLUSI LAYAR TERPOTONG) */
+  .iframe-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 70px); /* Sisa ruang setelah dikurangi tombol bawah */
+    overflow-y: auto; /* Izinkan scroll atas/bawah */
+    -webkit-overflow-scrolling: touch; /* Bikin scroll mulus di HP */
+  }
+
+  /* BINGKAI WEBSITE TRADING */
+  iframe { 
+    width: 100%; 
+    min-height: 1000px; /* PAKSA TINGGI agar panel bawah StrategyTune tidak sembunyi */
+    border: none; 
+    display: block; 
+  }
   
-  .btn-input { background: #f5b301; color: #000; padding: 12px 30px; border-radius: 8px; font-weight: bold; border: none; font-size: 16px; cursor: pointer; }
+  /* PANEL BAWAH (TOMBOL INPUT TETAP DI TEMPAT) */
+  .footer-controls { 
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 70px; 
+    display: flex; align-items: center; justify-content: center; 
+    background: var(--bg-1); border-top: 1px solid var(--line); 
+    z-index: 10;
+  }
+  .btn-main { background: var(--accent); color: #000; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 16px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(245,179,1,0.2); transition: 0.1s; width: 90%; max-width: 400px; }
+  .btn-main:active { transform: scale(0.97); }
+
+  /* MODAL FORM INPUT */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; backdrop-filter: blur(2px); }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; width: 100%; max-width: 340px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+  .modal h3 { margin: 0 0 16px; text-align: center; }
+  
+  .input-group { margin-bottom: 12px; }
+  .input-group label { display: block; font-size: 11px; color: #8a97ad; margin-bottom: 4px; }
+  .input-group input, .input-group select { width: 100%; padding: 10px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; color: #fff; font-size: 14px; outline: none; box-sizing: border-box; }
+  .input-group input:focus, .input-group select:focus { border-color: var(--accent); }
+  
+  .row { display: flex; gap: 10px; }
+  .row .input-group { flex: 1; }
+  
+  .action-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .action-btns button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+  .btn-cancel { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); }
+  .btn-save { background: var(--green); color: #fff; }
+
+  /* TOAST NOTIFIKASI */
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--green); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: bold; opacity: 0; pointer-events: none; transition: 0.3s ease; z-index: 200; box-shadow: 0 4px 12px rgba(34,197,94,0.4); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 
-<iframe src="https://strategytune.com/app" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-<div class="footer-controls">
-  <button class="btn-input" onclick="bukaForm()">Input Transaksi</button>
+<div class="iframe-container">
+  <iframe src="https://strategytune.com/app" allowfullscreen></iframe>
 </div>
 
+<div class="footer-controls">
+  <button class="btn-main" onclick="openForm()">📝 Input Transaksi</button>
+</div>
+
+<div class="modal-bg" id="inputModal">
+  <div class="modal">
+    <h3>Data Transaksi</h3>
+    
+    <div class="row">
+      <div class="input-group">
+        <label>Tipe Order</label>
+        <select id="inType">
+          <option value="BUY">🟢 BUY</option>
+          <option value="SELL">🔴 SELL</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Lot Size</label>
+        <input type="number" id="inLot" placeholder="0.10" step="0.01">
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="input-group">
+        <label>Entry Price</label>
+        <input type="number" id="inEntry" placeholder="Misal: 2350.50">
+      </div>
+      <div class="input-group">
+        <label>Close Price</label>
+        <input type="number" id="inClose" placeholder="Misal: 2355.00">
+      </div>
+    </div>
+    
+    <div class="input-group">
+      <label>Hasil P&L ($)</label>
+      <input type="number" id="inPnl" placeholder="Profit / Loss (Misal: 45.50 atau -10.00)">
+    </div>
+    
+    <div class="action-btns">
+      <button class="btn-cancel" onclick="closeForm()">Batal</button>
+      <button class="btn-save" id="btnSave" onclick="submitData()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Data berhasil disimpan!</div>
+
 <script>
-  function bukaForm() {
-    // Di sini Anda bisa arahkan ke Telegram Mini App Form Anda
-    // Atau munculkan popup form sederhana
-    alert("Silakan masukkan detail transaksi Anda.");
+  // ==========================================
+  // JANGAN LUPA: Masukkan Web App URL dari Google Sheets di sini
+  // ==========================================
+  const GOOGLE_SHEETS_URL = "MASUKKAN_URL_WEB_APP_DISINI";
+
+  const modal = document.getElementById('inputModal');
+  const toast = document.getElementById('toast');
+  const btnSave = document.getElementById('btnSave');
+
+  function openForm() { modal.classList.add('open'); }
+  function closeForm() { modal.classList.remove('open'); }
+
+  async function submitData() {
+    const type = document.getElementById('inType').value;
+    const lot = document.getElementById('inLot').value;
+    const entry = document.getElementById('inEntry').value;
+    const close = document.getElementById('inClose').value;
+    const pnl = document.getElementById('inPnl').value;
+
+    if(!lot || !entry || !close || !pnl) {
+      alert("Harap lengkapi semua data transaksi!");
+      return;
+    }
+
+    btnSave.innerText = "⏳ Loading...";
+    btnSave.disabled = true;
+
+    const data = { type, lot, entry, close, pnl };
+
+    try {
+      if (GOOGLE_SHEETS_URL === "MASUKKAN_URL_WEB_APP_DISINI") {
+        alert("PENTING: Anda belum memasukkan Web App URL di dalam kode HTML.");
+      } else {
+        await fetch(GOOGLE_SHEETS_URL, {
+          method: 'POST',
+          body: JSON.stringify(data),
+          mode: 'no-cors'
+        });
+      }
+
+      document.getElementById('inLot').value = '';
+      document.getElementById('inEntry').value = '';
+      document.getElementById('inClose').value = '';
+      document.getElementById('inPnl').value = '';
+      
+      closeForm();
+      showToast();
+      
+    } catch (error) {
+      alert("Gagal menghubungi server. Pastikan koneksi internet stabil.");
+    } finally {
+      btnSave.innerText = "Simpan";
+      btnSave.disabled = false;
+    }
+  }
+
+  function showToast() {
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); }, 3000);
   }
 </script>
 </body>
