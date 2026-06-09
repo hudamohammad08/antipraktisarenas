@@ -17,20 +17,21 @@
     overflow: hidden; 
   }
   
+  /* WADAH UTAMA */
   .iframe-container {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: calc(100vh - 70px);
-    overflow: auto;
-    -webkit-overflow-scrolling: touch; 
+    height: calc(100vh - 70px); /* Sisa layar dikurangi tombol bawah */
+    overflow: hidden; /* Kunci scroll agar benar-benar fit */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
   }
 
-  /* KOTAK PENYESUAI UKURAN */
+  /* KOTAK PENYESUAI UKURAN (SCALER) */
   #scaler {
-    width: 100%;
-    height: 100%;
     transform-origin: top center;
   }
 
@@ -73,7 +74,7 @@
 </head>
 <body>
 
-<div class="iframe-container">
+<div class="iframe-container" id="container">
   <div id="scaler">
     <iframe src="https://strategytune.com/app" allowfullscreen></iframe>
   </div>
@@ -113,40 +114,49 @@
   const modal = document.getElementById('inputModal');
   const toast = document.getElementById('toast');
 
-  // --- FITUR AUTO-FIT LAYAR LANDSCAPE ---
-  function applySmartFit() {
+  // --- FITUR SKALA PRESISI TINGGI ---
+  function applyPerfectFit() {
+    const container = document.getElementById('container');
     const scaler = document.getElementById('scaler');
     const isLandscape = window.innerWidth > window.innerHeight;
 
     if (isLandscape) {
-      // Tinggi target standar website agar PNL muncul utuh
-      const targetHeight = 850; 
-      // Sisa layar HP yang tersedia (dikurangi tombol bawah 70px)
-      const availableHeight = window.innerHeight - 70;
+      // 1. Kita tentukan resolusi "Laptop" palsu agar panel PNL muncul
+      const targetWidth = 1200;
+      const targetHeight = 800; // Ukuran ini sudah cukup untuk memunculkan panel bawah
       
-      // Kalkulasi rasio pengecilan
-      const zoomLevel = availableHeight / targetHeight;
+      // 2. Kita ukur ruang kosong yang ada di HP Anda saat ini
+      const availableWidth = container.clientWidth;
+      const availableHeight = container.clientHeight;
+      
+      // 3. Kita hitung seberapa besar penyusutan yang dibutuhkan
+      const scaleW = availableWidth / targetWidth;
+      const scaleH = availableHeight / targetHeight;
+      
+      // 4. Pilih penyusutan paling maksimal agar tidak ada yang terpotong sama sekali
+      const finalScale = Math.min(scaleW, scaleH);
 
-      // Terapkan Zoom & sesuaikan lebar agar tidak ada ruang kosong di pinggir
-      scaler.style.zoom = zoomLevel;
-      scaler.style.width = (100 / zoomLevel) + '%';
+      // 5. Terapkan secara paksa
+      scaler.style.width = targetWidth + 'px';
       scaler.style.height = targetHeight + 'px';
+      scaler.style.transform = `scale(${finalScale})`;
+      
     } else {
-      // Kembalikan ke normal jika HP ditegakkan (Portrait)
-      scaler.style.zoom = 1;
+      // Jika HP ditegakkan (Portrait), kembali ke normal
       scaler.style.width = '100%';
       scaler.style.height = '100%';
+      scaler.style.transform = 'none';
     }
   }
 
-  // Pantau jika HP diputar atau layar berubah ukuran
-  window.addEventListener('resize', applySmartFit);
+  // Pantau pergerakan layar
+  window.addEventListener('resize', applyPerfectFit);
   window.addEventListener('orientationchange', () => {
-    setTimeout(applySmartFit, 150); // Jeda sedikit agar layar selesai memutar
+    setTimeout(applyPerfectFit, 200); // Tunggu sampai layar selesai memutar
   });
   
-  // Terapkan saat pertama kali dibuka
-  applySmartFit();
+  // Eksekusi langsung
+  applyPerfectFit();
   // ---------------------------------------
 
   function openForm() { modal.classList.add('open'); }
@@ -173,7 +183,6 @@
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3000);
       
-      // Kosongkan form setelah simpan
       document.getElementById('inLot').value = '';
       document.getElementById('inEntry').value = '';
       document.getElementById('inClose').value = '';
